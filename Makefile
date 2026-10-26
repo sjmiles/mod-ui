@@ -13,7 +13,7 @@ NODE ?= node
 # The server files that must compile. py_compile reads one file at a time, so
 # this list is not test discovery; it is a syntax gate on the files that the
 # device runs first.
-PY_COMPILE_FILES = mod/host.py mod/session.py mod/webserver.py mod/sfzbuilder.py setup.py
+PY_COMPILE_FILES = mod/host.py mod/session.py mod/webserver.py mod/sfzbuilder.py mod/nam.py setup.py
 
 # unittest discover reads every test*.py file under test/.
 # node --test finds every *.test.js file below the directory that it runs in.
