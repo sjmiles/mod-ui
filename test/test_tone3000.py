@@ -150,5 +150,39 @@ class TestToneFolder(unittest.TestCase):
         self.assertEqual(tone3000.read_json(path), {"a": 1})
 
 
+class SelectTests(unittest.TestCase):
+    def test_pkce_pair(self):
+        import base64, hashlib
+        verifier, challenge = tone3000.pkce_pair()
+        self.assertGreaterEqual(len(verifier), 43)
+        self.assertLessEqual(len(verifier), 128)
+        expected = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).decode().rstrip("=")
+        self.assertEqual(challenge, expected)
+        self.assertNotEqual(tone3000.pkce_pair()[0], verifier)
+
+    def test_select_url(self):
+        from urllib.parse import urlparse, parse_qs
+        url = tone3000.select_url("https://www.tone3000.com/api/v1/", "t3k_pub_x",
+                                  "http://pistomp.local/tone3000/select/done", "st", "ch", "amp-cab")
+        parsed = urlparse(url)
+        self.assertEqual(parsed.netloc + parsed.path, "www.tone3000.com/api/v1/oauth/authorize")
+        q = parse_qs(parsed.query)
+        self.assertEqual(q['prompt'], ["select_tone"])
+        self.assertEqual(q['redirect_uri'], ["http://pistomp.local/tone3000/select/done"])
+        self.assertEqual(q['code_challenge_method'], ["S256"])
+        self.assertEqual(q['format'], ["nam"])
+        self.assertEqual(q['gears'], ["amp-cab"])
+        self.assertNotIn('gears', parse_qs(urlparse(tone3000.select_url("https://a/", "c", "r", "s", "x", "bogus")).query))
+
+    def test_select_page_escapes(self):
+        page = tone3000.select_page({'error': "</script><b>x</b>"})
+        self.assertNotIn("</script><b>", page)
+        self.assertNotIn("window.close", page)
+        page = tone3000.select_page({'tone_id': 12})
+        self.assertIn('"tone_id": 12', page)
+        self.assertIn('"type": "tone3000-select"', page)
+        self.assertIn("window.close", page)
+
+
 if __name__ == '__main__':
     unittest.main()

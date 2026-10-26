@@ -122,9 +122,10 @@ If a plugin instance or parameter does not exist, `host.py` no longer raises; it
 ### 6. NAM models and TONE3000
 
 - **NAM Models tab** in the plugin bar (`effects.js` `showNamModels`): one item per `.nam` file under `user-files/NAM Models`, labelled from the model's own metadata. Dragging one adds the NAM plugin and sends `patch_set` for its model parameter (found through `mod:fileTypes "nammodel"`). `mod/nam.py` reads the library; `/nam/models` serves it.
-- **TONE3000 panel** (`html/js/app/tone3000/`, an island; seam `html/js/tone3000.js`): sign in with the OAuth device flow (a code entered at tone3000.com/activate), browse Favorites / Downloaded / My tones / Trending / Latest, and download models to `NAM Models/TONE3000/<tone>/` with a `tone3000.json` sidecar. The redirect flows need an HTTPS redirect URI, which the device does not have.
+- **TONE3000 panel** (`html/js/app/tone3000/`, an island; seam `html/js/tone3000.js`): sign in with the OAuth device flow (a code entered at tone3000.com/activate), browse Favorites / Downloaded / My tones / Trending / Latest, and download models to `NAM Models/TONE3000/<tone>/` with a `tone3000.json` sidecar.
+- **Search all of TONE3000** opens TONE3000's own picker in a pop-up (the Select flow: OAuth + PKCE, `prompt=select_tone`, `format=nam`). TONE3000 sends the window back to `http://<device>/tone3000/select/done` with the tone and a code; the device exchanges the code (it holds the verifier, so picking also signs it in), and the page tells the panel on `BroadcastChannel('tone3000')` and closes. TONE3000 accepts this plain-http redirect only while the client has **no registered redirect URIs**; registering one (the dashboard wants HTTPS) breaks the picker.
 - The device holds the tokens in `$MOD_DATA_DIR/tone3000.json` (mode 600); the browser only talks to `/tone3000/*`. `mod/tone3000.py` is the pure part (tested in CI without Tornado); `mod/tone3000_client.py` does the HTTP.
-- Only the free API tier is used: the full catalog search needs a commercial agreement with TONE3000, so the panel links to tone3000.com for it. `TONE3000_CLIENT_ID` is a publishable key; never put the account's secret key on the device.
+- Only the free API tier is used: the full catalog search needs a commercial agreement with TONE3000, so the panel uses the hosted picker for it. `TONE3000_CLIENT_ID` is a publishable key; never put the account's secret key on the device.
 
 ## Architecture gotchas
 

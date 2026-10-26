@@ -178,7 +178,7 @@
   height: 32px;
 }
 #tone3000-library .t3k-query { width: 220px; }
-#tone3000-library .t3k-catalog { margin-left: auto; }
+#tone3000-library .t3k-catalog { margin-left: auto; padding: 6px 14px; }
 
 #tone3000-library .t3k-message { padding: 0 20px; min-height: 28px; line-height: 28px; color: var(--t3k-ok); }
 #tone3000-library .t3k-message--err { color: var(--t3k-err); }

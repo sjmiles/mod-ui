@@ -8,18 +8,26 @@
 #
 # The device signs in with the OAuth device flow (RFC 8628): the panel shows a
 # short code, you enter it at tone3000.com/activate on any device, and the
-# device polls until the sign-in is approved. The redirect flows need an HTTPS
-# redirect URI, which a device on the local network does not have.
+# device polls until the sign-in is approved.
+#
+# To reach the whole catalog, the panel also opens TONE3000's own picker (the
+# "Select" flow: OAuth with PKCE and prompt=select_tone). You search and pick a
+# tone there, and TONE3000 sends the browser back to the device with the tone
+# and a code that also signs the device in. TONE3000 accepts a plain-http
+# redirect URI on the local network as long as the client registers none.
 #
 # The tokens stay on the device. The browser never sees them: every call to
 # TONE3000 goes through the handlers in webserver.py.
 
+import base64
+import hashlib
 import json
 import os
 import re
+import secrets
 import time
 
-from urllib.parse import urlparse
+from urllib.parse import urlencode, urlparse
 
 from mod.nam import nam_models_dir, SIDECAR_NAME
 
@@ -34,6 +42,13 @@ PAGED_LISTS = ("favorited", "downloaded", "created")
 SHORT_LISTS = ("trending", "latest")
 
 GEARS = ("amp", "amp-cab", "pedal", "outboard", "cab", "space", "experimental")
+
+# The path on the device that TONE3000's picker sends the browser back to.
+SELECT_CALLBACK_PATH = "/tone3000/select/done"
+
+# How long a pick may take, and how many unfinished picks the device keeps.
+SELECT_TIMEOUT = 30 * 60
+SELECT_MAX_PENDING = 8
 
 # A token that runs out within this many seconds is refreshed first.
 REFRESH_MARGIN = 60
@@ -132,6 +147,56 @@ def token_record(resp, now):
         'refresh_token': resp.get("refresh_token"),
         'expires_at': now + expires_in,
     }
+
+
+def pkce_pair():
+    # RFC 7636: a random verifier and its S256 challenge.
+    verifier = secrets.token_urlsafe(48)
+    digest = hashlib.sha256(verifier.encode("ascii")).digest()
+    challenge = base64.urlsafe_b64encode(digest).decode("ascii").rstrip("=")
+    return verifier, challenge
+
+
+def select_url(api_url, client_id, redirect_uri, state, challenge, gear=None):
+    # The address of TONE3000's picker, limited to NAM tones.
+    params = [
+        ('client_id', client_id),
+        ('redirect_uri', redirect_uri),
+        ('response_type', "code"),
+        ('code_challenge', challenge),
+        ('code_challenge_method', "S256"),
+        ('state', state),
+        ('prompt', "select_tone"),
+        ('format', "nam"),
+        ('menubar', "true"),
+    ]
+    if gear in GEARS:
+        params.append(('gears', gear))
+    return api_url.rstrip("/") + "/oauth/authorize?" + urlencode(params)
+
+
+def select_page(result):
+    # The page the picker window shows once TONE3000 sent it back. It tells
+    # the panel (same origin, other window) what was picked and closes itself.
+    if result.get('tone_id'):
+        text = "Got it. Back to the pedal…"
+    elif result.get('error'):
+        text = result['error']
+    else:
+        text = "Nothing picked."
+    payload = json.dumps(dict(result, type="tone3000-select")).replace("</", "<\\/")
+    text = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    return (
+        "<!doctype html><html><head><meta charset=\"utf-8\"><title>TONE3000</title>"
+        "<meta name=\"viewport\" content=\"width=device-width\"></head>"
+        "<body style=\"background:#0a0a0a;color:#f2f2f2;font:15px sans-serif;padding:40px\">"
+        "<p>" + text + "</p><p style=\"color:#a6a6a6\">You can close this window.</p>"
+        "<script>(function(){var m=" + payload + ";"
+        "try{new BroadcastChannel('tone3000').postMessage(m)}catch(e){}"
+        + ("" if result.get('error') else "setTimeout(function(){window.close()},600);") +
+        "})()</script>"
+        "</body></html>"
+    )
 
 
 def may_send_token(url):

@@ -123,6 +123,7 @@ export function mount(root) {
             loadTones()
         },
         onMore: () => loadTones(store.get().page + 1),
+        onBrowse: browse,
         onOpenTone: openTone,
         onCloseTone: () => {
             detailGeneration++
@@ -324,6 +325,59 @@ export function mount(root) {
         })
     }
 
+    // TONE3000's picker runs in a window of its own. When you pick a tone,
+    // TONE3000 sends that window back to the device, whose page tells this
+    // panel on a BroadcastChannel and closes the window.
+    function browse() {
+        const picker = window.open(api.pickerUrl(store.get().gear), model.PICKER_WINDOW,
+            'popup,width=1100,height=800')
+        if (!picker) {
+            say('The browser blocked the TONE3000 window. Allow pop-ups for this page and try again.', true)
+            return
+        }
+        say('Pick a tone in the TONE3000 window. It opens here once you pick it.')
+    }
+
+    /** @param {number} toneId */
+    function openPicked(toneId) {
+        say('Opening the tone you picked…')
+        api.tone(toneId).then((resp) => {
+            if (!resp.ok || !resp.tone) {
+                say(errorText(resp, 'Cannot read the tone you picked.'), true)
+                return
+            }
+            say('')
+            openTone(resp.tone)
+        }, () => say('Cannot reach the pedal.', true))
+    }
+
+    /** @param {MessageEvent} event */
+    function onPick(event) {
+        const pick = model.readPick(event.data)
+        if (!pick) {
+            return
+        }
+        // The pick may have signed the device in.
+        refreshStatus().then(() => {
+            if (pick.error) {
+                say(pick.error, true)
+            } else if (pick.toneId) {
+                openPicked(pick.toneId)
+            } else {
+                say('')
+            }
+        })
+    }
+
+    /** @type {BroadcastChannel|null} */
+    let channel = null
+    try {
+        channel = new BroadcastChannel(model.PICK_CHANNEL)
+        channel.addEventListener('message', onPick)
+    } catch (e) {
+        channel = null
+    }
+
     function open() {
         isOpen = true
         drawToolbar()
@@ -341,5 +395,13 @@ export function mount(root) {
     drawToolbar()
     drawAccount()
 
-    return { open: open, close: close, destroy: close }
+    function destroy() {
+        close()
+        if (channel) {
+            channel.close()
+            channel = null
+        }
+    }
+
+    return { open: open, close: close, destroy: destroy }
 }

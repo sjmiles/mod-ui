@@ -86,6 +86,24 @@ export function download(toneId, modelIds) {
     return post('/tone3000/download', { tone_id: toneId, model_ids: modelIds })
 }
 
+/**
+ * @param {number} toneId
+ * @returns {Promise<any>}
+ */
+export function tone(toneId) {
+    return get('/tone3000/tone', { id: toneId })
+}
+
+/**
+ * The address that opens TONE3000's picker. The device sends the window on to
+ * TONE3000, and TONE3000 sends it back to the device with the pick.
+ * @param {string} gear
+ * @returns {string}
+ */
+export function pickerUrl(gear) {
+    return '/tone3000/select/start' + (gear ? '?gear=' + encodeURIComponent(gear) : '')
+}
+
 /** @returns {Promise<any>} The NAM models on the device. */
 export function namModels() {
     return get('/nam/models')

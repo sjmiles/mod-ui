@@ -19,6 +19,7 @@ import { h, clear } from './dom.js'
  * @property {(gear: string) => void} onGear
  * @property {(query: string) => void} onQuery
  * @property {() => void} onMore
+ * @property {() => void} onBrowse
  * @property {(tone: model.Tone) => void} onOpenTone
  * @property {() => void} onCloseTone
  * @property {(id: number, on: boolean) => void} onPick
@@ -63,10 +64,11 @@ export function createLayout(root, handlers) {
         },
     }))
 
-    const catalog = h('a.t3k-catalog', {
-        href: model.CATALOG_URL, target: '_blank', rel: 'noopener',
-        title: 'Search every tone on tone3000.com. A tone you favorite there shows up under Favorites here.',
-        text: 'Find more on TONE3000 ↗',
+    const catalog = h('button.t3k-btn.t3k-btn--accent.t3k-catalog', {
+        type: 'button',
+        title: 'Search every NAM tone in TONE3000\'s own picker. The tone you pick opens here, ready to download.',
+        text: 'Search all of TONE3000 ↗',
+        onclick: handlers.onBrowse,
     })
 
     const toolbar = h('div.t3k-toolbar', {}, [tabs, gear, query, catalog])
@@ -189,7 +191,7 @@ export function renderTones(el, state, handlers) {
 
     let emptyText = ''
     if (info.needsSignIn && !signedIn) {
-        emptyText = 'Sign in to see your ' + info.label.toLowerCase() + '. Trending and Latest work without a sign-in.'
+        emptyText = 'Sign in to see your ' + info.label.toLowerCase() + '. Trending, Latest and Search all of TONE3000 work without a sign-in.'
     } else if (state.loading && state.tones.length === 0) {
         emptyText = 'Loading…'
     } else if (state.tones.length === 0) {

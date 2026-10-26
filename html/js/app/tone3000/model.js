@@ -50,8 +50,8 @@
 
 /**
  * The lists that the panel offers. The free tier of the TONE3000 API allows
- * these and the hosted picker; a full search of the catalog needs a commercial
- * agreement, so the panel links to tone3000.com for it.
+ * these and the hosted picker; a search of the catalog through the API needs a
+ * commercial agreement, so the panel opens TONE3000's own picker for it.
  * `query` says whether the list takes a search.
  */
 export const LISTS = [
@@ -74,8 +74,25 @@ export const GEARS = [
     { id: 'experimental', label: 'Experimental' },
 ]
 
-/** Where the full catalog is, for everything the lists above do not reach. */
-export const CATALOG_URL = 'https://www.tone3000.com/search'
+/** The name of the window that shows TONE3000's picker. */
+export const PICKER_WINDOW = 'tone3000-select'
+
+/** The channel on which the picker window tells the panel what was picked. */
+export const PICK_CHANNEL = 'tone3000'
+
+/**
+ * Reads a message of the picker window.
+ * @param {any} data
+ * @returns {{ toneId: number|null, error: string|null }|null} Null for a message of something else.
+ */
+export function readPick(data) {
+    if (!data || data.type !== 'tone3000-select') {
+        return null
+    }
+    const toneId = Number.isInteger(data.tone_id) && data.tone_id > 0 ? data.tone_id : null
+    const error = typeof data.error === 'string' && data.error ? data.error : null
+    return { toneId: toneId, error: error }
+}
 
 /**
  * The NAM sizes from the lightest to the heaviest. The lighter the model, the

@@ -7,14 +7,15 @@
 #
 # The device signs in with the OAuth device flow (RFC 8628): the panel shows a
 # short code, you enter it at tone3000.com/activate on any device, and the
-# device polls until the sign-in is approved. The redirect flows need an HTTPS
-# redirect URI, which a device on the local network does not have.
+# device polls until the sign-in is approved. Picking a tone in TONE3000's own
+# picker (start_select / finish_select) signs the device in too.
 #
 # The tokens stay on the device. The browser never sees them: every call to
 # TONE3000 goes through the handlers in webserver.py.
 
 import json
 import os
+import secrets
 import time
 
 from urllib.parse import urlencode
@@ -26,8 +27,9 @@ from tornado.ioloop import IOLoop
 from mod.settings import TONE3000_API_URL, TONE3000_CLIENT_ID, TONE3000_TOKENS_FILE
 from mod.tone3000 import (
     DEVICE_CODE_GRANT, GEARS, PAGED_LISTS, SHORT_LISTS, REFRESH_MARGIN, REQUEST_TIMEOUT, DOWNLOAD_TIMEOUT,
-    Tone3000Error, ToneFolder, is_nam_model, may_send_token, model_summary, read_json, token_record,
-    tone_summary, write_json, _str_or_none,
+    SELECT_MAX_PENDING, SELECT_TIMEOUT,
+    Tone3000Error, ToneFolder, is_nam_model, may_send_token, model_summary, pkce_pair, read_json,
+    select_url, token_record, tone_summary, write_json, _str_or_none,
 )
 
 
@@ -38,6 +40,7 @@ class Tone3000(object):
         self.tokens_file = tokens_file
         self.tokens = read_json(tokens_file)
         self.pending = None
+        self.selects = {}
         self.last_error = None
         self.user = self.tokens.get("user") if self.tokens else None
 
@@ -217,6 +220,62 @@ class Tone3000(object):
             else:
                 self.last_error = "TONE3000 refused the sign-in (%s)." % (error or code)
 
+    # -- the picker (Select flow)
+
+    def start_select(self, redirect_uri, gear=None):
+        # The address of TONE3000's picker. The device keeps the PKCE verifier,
+        # so only the device can turn the code it sends back into tokens.
+        if not self.client_id:
+            raise Tone3000Error("No TONE3000 client id is set on this device")
+        now = time.time()
+        self.selects = dict((s, p) for s, p in self.selects.items() if p['expires_at'] > now)
+        while len(self.selects) >= SELECT_MAX_PENDING:
+            del self.selects[min(self.selects, key=lambda s: self.selects[s]['expires_at'])]
+        state = secrets.token_urlsafe(24)
+        verifier, challenge = pkce_pair()
+        self.selects[state] = {
+            'verifier': verifier,
+            'redirect_uri': redirect_uri,
+            'expires_at': now + SELECT_TIMEOUT,
+        }
+        return select_url(self.api_url, self.client_id, redirect_uri, state, challenge, gear)
+
+    @gen.coroutine
+    def finish_select(self, state, code=None, tone_id=None, error=None):
+        # What TONE3000 sent back: a code (the sign-in) and a tone_id (the pick),
+        # or an error, or neither when the picker was closed.
+        pending = self.selects.pop(state, None) if state else None
+        if pending is None or pending['expires_at'] < time.time():
+            raise Tone3000Error("This pick does not match one the pedal started. Start again from the panel.", 400)
+        if error:
+            raise Tone3000Error("TONE3000 refused: %s" % error, 400)
+        if code:
+            status, data = yield self._fetch_json(self.api_url + "/oauth/token", "POST", {
+                'grant_type': "authorization_code",
+                'code': code,
+                'code_verifier': pending['verifier'],
+                'redirect_uri': pending['redirect_uri'],
+                'client_id': self.client_id,
+            })
+            if status != 200:
+                message = data.get("error_description") or data.get("error") if isinstance(data, dict) else None
+                raise Tone3000Error("TONE3000 refused the sign-in: %s" % (message or status), status)
+            # A device-code sign-in that was still waiting is not needed now.
+            self.pending = None
+            self.last_error = None
+            self.user = None
+            self._save_tokens(token_record(data, time.time()))
+            yield self._load_user()
+        if tone_id is None:
+            raise gen.Return(None)
+        if self.tokens is None:
+            raise Tone3000Error("Sign in to TONE3000 to download that tone.", 401)
+        raise gen.Return(int(tone_id))
+
+    @gen.coroutine
+    def get_tone(self, tone_id):
+        raise gen.Return(tone_summary((yield self.api_get("/tones/%s" % int(tone_id)))))
+
     @gen.coroutine
     def _load_user(self):
         try:
@@ -269,7 +328,7 @@ class Tone3000(object):
 
     @gen.coroutine
     def download(self, tone_id, model_ids):
-        tone = tone_summary((yield self.api_get("/tones/%s" % int(tone_id))))
+        tone = yield self.get_tone(tone_id)
         models = yield self.list_models(tone['id'])
         wanted = set(int(i) for i in model_ids)
         models = [m for m in models if m["id"] in wanted]

@@ -57,7 +57,8 @@ from mod.sfzbuilder import (
     load_bank, rename_bank, delete_bank,
 )
 from mod.nam import find_model_parameter, list_models as nam_list_models
-from mod.tone3000 import Tone3000Error, model_summary as tone3000_model_summary
+from mod.tone3000 import (Tone3000Error, SELECT_CALLBACK_PATH as TONE3000_SELECT_CALLBACK_PATH,
+                          model_summary as tone3000_model_summary, select_page as tone3000_select_page)
 from mod.tone3000_client import TONE3000
 from mod.session import SESSION
 from modtools.utils import (
@@ -2699,6 +2700,54 @@ class Tone3000Models(Tone3000Handler):
             return
         self.write({'ok': True, 'models': [tone3000_model_summary(m) for m in models]})
 
+class Tone3000Tone(Tone3000Handler):
+    @gen.coroutine
+    def get(self):
+        try:
+            tone_id = int(self.get_argument('id'))
+        except ValueError:
+            raise web.HTTPError(400)
+        try:
+            tone = yield TONE3000.get_tone(tone_id)
+        except Exception as e:
+            self.write_error_message(e)
+            return
+        self.write({'ok': True, 'tone': tone})
+
+class Tone3000SelectStart(web.RequestHandler):
+    # Opened in a window of its own: sends the browser on to TONE3000's picker,
+    # which sends it back to Tone3000SelectDone on this same address.
+    def get(self):
+        redirect_uri = "%s://%s%s" % (self.request.protocol, self.request.host, TONE3000_SELECT_CALLBACK_PATH)
+        try:
+            url = TONE3000.start_select(redirect_uri, self.get_argument('gear', None))
+        except Tone3000Error as e:
+            self.set_header('Cache-Control', 'no-store')
+            self.write(tone3000_select_page({'error': str(e)}))
+            return
+        self.set_header('Cache-Control', 'no-store')
+        self.redirect(url)
+
+class Tone3000SelectDone(web.RequestHandler):
+    @gen.coroutine
+    def get(self):
+        self.set_header('Cache-Control', 'no-store')
+        try:
+            tone_id = yield TONE3000.finish_select(self.get_argument('state', None),
+                                                   self.get_argument('code', None),
+                                                   self.get_argument('tone_id', None),
+                                                   self.get_argument('error', None))
+        except Tone3000Error as e:
+            result = {'error': str(e)}
+        except ValueError:
+            result = {'error': "TONE3000 sent back a tone the pedal cannot read."}
+        except Exception as e:
+            print("ERROR in TONE3000 pick:", repr(e))
+            result = {'error': "Cannot reach TONE3000. Is the device online?"}
+        else:
+            result = {'tone_id': tone_id} if tone_id is not None else {'canceled': True}
+        self.write(tone3000_select_page(result))
+
 class Tone3000Download(Tone3000Handler):
     @gen.coroutine
     def post(self):
@@ -2823,6 +2872,9 @@ application = web.Application(
             (r"/tone3000/tones/?", Tone3000Tones),
             (r"/tone3000/models/?", Tone3000Models),
             (r"/tone3000/download/?", Tone3000Download),
+            (r"/tone3000/tone/?", Tone3000Tone),
+            (r"/tone3000/select/start/?", Tone3000SelectStart),
+            (r"/tone3000/select/done/?", Tone3000SelectDone),
 
             # sfz sound-bank builder
             (r"/sfzbuilder/banks/?", SfzBuilderBanks),
