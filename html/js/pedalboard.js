@@ -696,8 +696,9 @@ JqueryClass('pedalboard', {
      * Parameters are:
      *   - Plugin is a data structure as parsed by mod-python's modcommon.lv2.Plugin class.
      *   - draggableOptions will be passed as parameter to the draggable jquery ui plugin
+     *   - loadedCallback, if given, is called with the new instance once the plugin is loaded
      */
-    registerAvailablePlugin: function (element, pluginData, draggableOptions) {
+    registerAvailablePlugin: function (element, pluginData, draggableOptions, loadedCallback) {
         var self = $(this)
 
         element.bind('pluginAdded', function (e, position) {
@@ -714,6 +715,8 @@ JqueryClass('pedalboard', {
                     }, 1)
                     */
                     waiter.stopPlugin(instance, false)
+                    if (loadedCallback)
+                        loadedCallback(instance)
                 },
                 function () {
                     self.data('replacementPlugin', null)

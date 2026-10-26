@@ -104,6 +104,8 @@ JqueryClass('effectBox', {
         self.find('ul.js-category-tabs li').click(function () {
             var category = $(this).attr('id').replace(/^effect-tab-/, '')
             self.effectBox('setCategory', category)
+            if (category == 'NAM')
+                self.effectBox('showNamModels')
         })
 
         self.find('.js-effects-fold').click(function () {
@@ -317,6 +319,8 @@ JqueryClass('effectBox', {
             self.find('#effect-tab-MaxGen').show()
         }
 
+        self.effectBox('showNamModels')
+
         // disable navigation while we render plugins
         self.find('.nav-left').addClass('disabled')
         self.find('.nav-right').addClass('disabled')
@@ -424,6 +428,132 @@ JqueryClass('effectBox', {
         if (!index[plugin.uri])
             index[plugin.uri] = []
         index[plugin.uri].push([plugin, rendered, container])
+    },
+
+    // NAM models are shown as items of their own. Dragging one to the pedalboard
+    // adds the NAM plugin with that model already loaded.
+    showNamModels: function () {
+        var self = $(this)
+        var container = self.find('#effect-content-NAM')
+        var tab = self.find('#effect-tab-NAM')
+        var renderId = (self.data('namRenderId') || 0) + 1
+        self.data('namRenderId', renderId)
+
+        var term = (self.data('searchbox').val() || '').toLowerCase()
+
+        var render = function (pluginData, nam, models) {
+            if (self.data('namRenderId') != renderId)
+                return
+            container.html('')
+
+            if (term) {
+                models = models.filter(function (model) {
+                    return [model.label, model.basename, model.folder, model.gear_make, model.gear_model, model.modeled_by]
+                        .join(' ').toLowerCase().indexOf(term) >= 0
+                })
+            }
+            tab.find('.count').text('(' + models.length + ')')
+
+            if (!pluginData) {
+                container.append($('<div class="nam-models-empty">').text(
+                    'Install the Neural Amp Modeler plugin to use NAM models.'))
+                return
+            }
+            if (models.length == 0 && !term) {
+                container.append($('<div class="nam-models-empty">').text(
+                    'No models yet. Upload .nam files to the "NAM Models" folder with the File Manager.'))
+                return
+            }
+
+            for (var i in models) {
+                self.effectBox('renderNamModel', models[i], pluginData, nam.parameter, container)
+            }
+            if (self.data('category') == 'NAM')
+                self.effectBox('calculateNavigation')
+        }
+
+        $.ajax({
+            url: '/nam/models',
+            success: function (data) {
+                if (!data.plugin) {
+                    render(null, null, data.models)
+                    return
+                }
+                $.ajax({
+                    url: '/effect/get',
+                    data: {
+                        uri: data.plugin.uri,
+                        version: VERSION,
+                    },
+                    success: function (pluginData) {
+                        render(pluginData, data.plugin, data.models)
+                    },
+                    error: function () {
+                        render(null, null, data.models)
+                    },
+                    cache: false,
+                    dataType: 'json'
+                })
+            },
+            cache: false,
+            dataType: 'json'
+        })
+    },
+
+    renderNamModel: function (model, plugin, parameterUri, container) {
+        var self = $(this)
+        var uri = escape(plugin.uri)
+        var ver = [plugin.builder, plugin.microVersion, plugin.minorVersion, plugin.release].join('_')
+
+        var gear = [model.gear_make, model.gear_model].filter(Boolean).join(' ')
+        var subtitle = gear || model.folder || model.modeled_by || plugin.label
+        var tooltip = [
+            model.label,
+            gear,
+            model.tone_type,
+            model.modeled_by ? 'by ' + model.modeled_by : '',
+            model.folder ? 'in ' + model.folder : '',
+        ].filter(Boolean).join(' \u00b7 ')
+
+        var thumbnail_href = (model.tone3000 && model.tone3000.image_url)
+                           ? model.tone3000.image_url
+                           : (plugin.gui && plugin.gui.thumbnail)
+                             ? ("/effect/image/thumbnail.png?uri=" + uri + "&v=" + ver)
+                             : "/resources/pedals/default-thumbnail.png"
+
+        var div = document.createElement("div");
+        div.innerHTML = Mustache.render(TEMPLATES.nam_model, {
+            uri: uri,
+            label: model.label,
+            subtitle: subtitle,
+            tooltip: tooltip,
+            size: model.size,
+            thumbnail_href: thumbnail_href,
+        });
+        var rendered = $(Array.prototype.slice.call(div.childNodes, 0));
+
+        var pedalboard = self.data('pedalboard')
+        pedalboard.pedalboard('registerAvailablePlugin', rendered, plugin, {
+            distance: 2,
+            delay: 100,
+            start: function () {
+                if (self.data('info'))
+                    self.data('info').remove()
+                self.data('windowManager').closeWindows(null, true)
+                self.window('fade')
+            },
+            stop: function () {
+                self.window('unfade')
+            }
+        }, function (instance) {
+            pedalboard.data('pluginPatchSet')(instance, parameterUri, 'p', model.fullname)
+            pedalboard.pedalboard('setWritableParameterValue', instance, parameterUri, 'p', model.fullname)
+        })
+
+        container.append(rendered)
+
+        var img = rendered.find('img[data-src]')[0]
+        if (img) self.data('thumbnailObserver').observe(img)
     },
 
     showPluginInfo: function (plugin) {

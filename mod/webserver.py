@@ -56,6 +56,7 @@ from mod.sfzbuilder import (
     list_bank_samples, list_device_samples, list_usb_samples, create_bank, build_bank,
     load_bank, rename_bank, delete_bank,
 )
+from mod.nam import find_model_parameter, list_models as nam_list_models
 from mod.session import SESSION
 from modtools.utils import (
     kPedalboardInfoUserOnly, kPedalboardInfoFactoryOnly, kPedalboardInfoBoth,
@@ -2594,6 +2595,36 @@ class FilesList(JsonRequestHandler):
             'files': tuple(retfiles[fn] for fn in fullnames),
         })
 
+class NamModelsList(JsonRequestHandler):
+    # Hints for spotting NAM plugins in the plugin list without asking lilv for
+    # the full info of every installed plugin.
+    plugin_uri_hints = ("neural", "nam")
+
+    def _get_nam_plugin(self):
+        for uri in get_plugin_list():
+            luri = uri.lower()
+            if not any(hint in luri for hint in self.plugin_uri_hints):
+                continue
+            try:
+                info = get_plugin_info(uri)
+            except:
+                continue
+            parameter = find_model_parameter(info)
+            if parameter is not None:
+                return {
+                    'uri': uri,
+                    'label': info['label'] or info['name'],
+                    'parameter': parameter,
+                }
+        return None
+
+    def get(self):
+        self.write({
+            'ok': True,
+            'plugin': self._get_nam_plugin(),
+            'models': nam_list_models(),
+        })
+
 settings = {'log_function': lambda handler: None} if not LOG else {}
 
 application = web.Application(
@@ -2691,6 +2722,7 @@ application = web.Application(
 
             # file listing etc
             (r"/files/list/?", FilesList),
+            (r"/nam/models/?", NamModelsList),
 
             # sfz sound-bank builder
             (r"/sfzbuilder/banks/?", SfzBuilderBanks),
