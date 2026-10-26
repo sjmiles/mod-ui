@@ -57,6 +57,8 @@ from mod.sfzbuilder import (
     load_bank, rename_bank, delete_bank,
 )
 from mod.nam import find_model_parameter, list_models as nam_list_models
+from mod.tone3000 import Tone3000Error, model_summary as tone3000_model_summary
+from mod.tone3000_client import TONE3000
 from mod.session import SESSION
 from modtools.utils import (
     kPedalboardInfoUserOnly, kPedalboardInfoFactoryOnly, kPedalboardInfoBoth,
@@ -2625,6 +2627,98 @@ class NamModelsList(JsonRequestHandler):
             'models': nam_list_models(),
         })
 
+class Tone3000Handler(JsonRequestHandler):
+    # Every call to TONE3000 goes through the device, which holds the tokens.
+    # An error is an answer with ok false, so the panel can say what went wrong.
+
+    def write_error_message(self, error):
+        if isinstance(error, Tone3000Error):
+            message = str(error)
+        else:
+            print("ERROR in TONE3000 handler:", repr(error))
+            message = "Cannot reach TONE3000. Is the device online?"
+        self.write({'ok': False, 'error': message, 'status': TONE3000.status()})
+
+    def read_json_body(self):
+        try:
+            data = json.loads(self.request.body.decode("utf-8", errors="ignore") or "{}")
+        except ValueError:
+            raise web.HTTPError(400)
+        if not isinstance(data, dict):
+            raise web.HTTPError(400)
+        return data
+
+class Tone3000Status(Tone3000Handler):
+    def get(self):
+        self.write({'ok': True, 'status': TONE3000.status()})
+
+class Tone3000SignIn(Tone3000Handler):
+    @gen.coroutine
+    def post(self):
+        try:
+            status = yield TONE3000.start_sign_in()
+        except Exception as e:
+            self.write_error_message(e)
+            return
+        self.write({'ok': True, 'status': status})
+
+class Tone3000SignOut(Tone3000Handler):
+    def post(self):
+        TONE3000.disconnect()
+        self.write({'ok': True, 'status': TONE3000.status()})
+
+class Tone3000Tones(Tone3000Handler):
+    @gen.coroutine
+    def get(self):
+        try:
+            page = max(1, int(self.get_argument('page', '1')))
+        except ValueError:
+            page = 1
+        try:
+            data = yield TONE3000.list_tones(self.get_argument('list', 'favorited'),
+                                             self.get_argument('gear', None),
+                                             self.get_argument('query', None),
+                                             page)
+        except Exception as e:
+            self.write_error_message(e)
+            return
+        data['ok'] = True
+        self.write(data)
+
+class Tone3000Models(Tone3000Handler):
+    @gen.coroutine
+    def get(self):
+        try:
+            tone_id = int(self.get_argument('tone_id'))
+        except ValueError:
+            raise web.HTTPError(400)
+        try:
+            models = yield TONE3000.list_models(tone_id)
+        except Exception as e:
+            self.write_error_message(e)
+            return
+        self.write({'ok': True, 'models': [tone3000_model_summary(m) for m in models]})
+
+class Tone3000Download(Tone3000Handler):
+    @gen.coroutine
+    def post(self):
+        data = self.read_json_body()
+        try:
+            tone_id = int(data.get('tone_id'))
+            model_ids = [int(i) for i in data.get('model_ids') or []]
+        except (TypeError, ValueError):
+            raise web.HTTPError(400)
+        if not model_ids:
+            self.write({'ok': False, 'error': "Pick at least one model"})
+            return
+        try:
+            result = yield TONE3000.download(tone_id, model_ids)
+        except Exception as e:
+            self.write_error_message(e)
+            return
+        result['ok'] = True
+        self.write(result)
+
 settings = {'log_function': lambda handler: None} if not LOG else {}
 
 application = web.Application(
@@ -2723,6 +2817,12 @@ application = web.Application(
             # file listing etc
             (r"/files/list/?", FilesList),
             (r"/nam/models/?", NamModelsList),
+            (r"/tone3000/status/?", Tone3000Status),
+            (r"/tone3000/signin/?", Tone3000SignIn),
+            (r"/tone3000/signout/?", Tone3000SignOut),
+            (r"/tone3000/tones/?", Tone3000Tones),
+            (r"/tone3000/models/?", Tone3000Models),
+            (r"/tone3000/download/?", Tone3000Download),
 
             # sfz sound-bank builder
             (r"/sfzbuilder/banks/?", SfzBuilderBanks),
