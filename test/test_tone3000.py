@@ -150,6 +150,31 @@ class TestToneFolder(unittest.TestCase):
         self.assertEqual(tone3000.read_json(path), {"a": 1})
 
 
+class CoverTests(unittest.TestCase):
+    def test_cover_extension(self):
+        self.assertEqual(tone3000.cover_extension("image/jpeg", b"x"), ".jpg")
+        self.assertEqual(tone3000.cover_extension("image/png; charset=binary", b"x"), ".png")
+        self.assertIsNone(tone3000.cover_extension("text/html", b"x"))
+        self.assertIsNone(tone3000.cover_extension("image/jpeg", b""))
+        self.assertIsNone(tone3000.cover_extension("image/jpeg", b"x" * (tone3000.MAX_COVER_BYTES + 1)))
+
+    def test_folder_keeps_its_picture(self):
+        tmp = tempfile.mkdtemp()
+        try:
+            tone = tone3000.tone_summary({"id": 5, "title": "Plexi"})
+            folder = tone3000.ToneFolder(tone, tmp)
+            self.assertIsNone(folder.image)
+            folder.set_image(b"png", ".png")
+            folder.save()
+            again = tone3000.ToneFolder(tone, tmp)
+            self.assertEqual(again.image, "cover.png")
+            again.set_image(b"jpg", ".jpg")
+            self.assertFalse(os.path.exists(os.path.join(again.path, "cover.png")))
+            self.assertEqual(tone3000.read_json(os.path.join(folder.path, "tone3000.json"))["image"], "cover.png")
+        finally:
+            shutil.rmtree(tmp)
+
+
 class SelectTests(unittest.TestCase):
     def test_pkce_pair(self):
         import base64, hashlib

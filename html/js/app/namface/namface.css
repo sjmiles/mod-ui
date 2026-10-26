@@ -1,0 +1,64 @@
+/* SPDX-FileCopyrightText: 2012-2023 MOD Audio UG
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ *
+ * The plate that mount.js puts on the pedal of a NAM plugin: the picture and
+ * the name of the current model, over the top band of the pedal. It takes no
+ * clicks, so the pedal still drags from anywhere.
+ */
+
+/* The face of neural-amp-modeler-lv2 (560x268): the plate covers the printed
+   "NEURAL AMP MODELER" title (x 88-473, y 42-62) and stops above the knob
+   titles, which start at y 86. */
+.mod-pedal-nam > .nam-face {
+  top: 22px;
+  left: 88px;
+  right: 87px;
+  height: 58px;
+}
+
+.mod-pedal > .nam-face {
+  position: absolute;
+  top: 12px;
+  left: 8%;
+  right: 8%;
+  height: 58px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 5px 14px 5px 5px;
+  box-sizing: border-box;
+  background: rgba(8, 8, 8, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  pointer-events: none;
+  z-index: 1;
+  overflow: hidden;
+}
+.mod-pedal > .nam-face .nam-face-image {
+  flex: none;
+  width: 72px;
+  height: 46px;
+  object-fit: cover;
+  border-radius: 6px;
+  display: block;
+}
+.mod-pedal > .nam-face .nam-face-text {
+  min-width: 0;
+  flex: 1;
+  line-height: 1.25;
+}
+.mod-pedal > .nam-face .nam-face-title {
+  color: #f2f2f2;
+  font-size: 17px;
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mod-pedal > .nam-face .nam-face-detail {
+  color: #b5b5b5;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

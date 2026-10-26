@@ -27,7 +27,7 @@ from tornado.ioloop import IOLoop
 from mod.settings import TONE3000_API_URL, TONE3000_CLIENT_ID, TONE3000_TOKENS_FILE
 from mod.tone3000 import (
     DEVICE_CODE_GRANT, GEARS, PAGED_LISTS, SHORT_LISTS, REFRESH_MARGIN, REQUEST_TIMEOUT, DOWNLOAD_TIMEOUT,
-    SELECT_MAX_PENDING, SELECT_TIMEOUT,
+    SELECT_MAX_PENDING, SELECT_TIMEOUT, cover_extension,
     Tone3000Error, ToneFolder, is_nam_model, may_send_token, model_summary, pkce_pair, read_json,
     select_url, token_record, tone_summary, write_json, _str_or_none,
 )
@@ -343,8 +343,28 @@ class Tone3000(object):
                 body = yield self._download_model(model["model_url"])
                 path = folder.add(model_summary(model), body)
             written.append(path)
+        if folder.image is None and tone['image_url']:
+            yield self._download_cover(folder, tone['image_url'])
         folder.save()
         raise gen.Return({'folder': folder.path, 'files': written})
+
+    @gen.coroutine
+    def _download_cover(self, folder, url):
+        # The picture is a nicety: a tone without one still downloads.
+        if not url.startswith(("https://", "http://")):
+            return
+        try:
+            response = yield AsyncHTTPClient().fetch(HTTPRequest(url, request_timeout=REQUEST_TIMEOUT,
+                                                                 follow_redirects=True),
+                                                     raise_error=False)
+        except Exception as e:
+            print("TONE3000: cannot download the picture of the tone:", e)
+            return
+        extension = cover_extension(response.headers.get("Content-Type"), response.body) if response.code == 200 else None
+        if extension is None:
+            print("TONE3000: the picture of the tone is not a picture (%s)" % response.code)
+            return
+        folder.set_image(response.body, extension)
 
     @gen.coroutine
     def _download_model(self, url):

@@ -515,7 +515,9 @@ JqueryClass('effectBox', {
             model.folder ? 'in ' + model.folder : '',
         ].filter(Boolean).join(' \u00b7 ')
 
-        var thumbnail_href = (model.tone3000 && model.tone3000.image_url)
+        var thumbnail_href = model.image
+                           ? model.image
+                           : (model.tone3000 && model.tone3000.image_url)
                            ? model.tone3000.image_url
                            : (plugin.gui && plugin.gui.thumbnail)
                              ? ("/effect/image/thumbnail.png?uri=" + uri + "&v=" + ver)

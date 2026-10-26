@@ -1727,6 +1727,10 @@ function GUI(effect, options) {
     }
 
     this.triggerJS = function (event) {
+        // The NAM pedal face (js/namface.js) follows the model of NAM plugins.
+        if (self.jsStarted && typeof namFace === 'function')
+            namFace(self, event)
+
         if (!self.jsCallback || !self.jsStarted)
             return
 
