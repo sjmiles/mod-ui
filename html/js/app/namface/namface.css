@@ -1,9 +1,11 @@
 /* SPDX-FileCopyrightText: 2012-2023 MOD Audio UG
  * SPDX-License-Identifier: AGPL-3.0-or-later
  *
- * What mount.js puts on the pedal of a NAM plugin: the whole picture of the
- * current model, as large as the face allows (under the controls, dimmed so
- * that their labels stay readable), and its name on a plate over the top band. Neither
+ * What mount.js puts on the pedal of a NAM plugin: the name of the current
+ * model on a plate at the top, and its whole picture. On the face of
+ * neural-amp-modeler-lv2 the pedal grows taller and the picture gets its own
+ * area above the controls; on any other face it sits behind the controls,
+ * dimmed so that their labels stay readable. Neither
  * takes clicks, so the pedal still drags from anywhere.
  */
 
@@ -94,4 +96,37 @@
 .mod-pedal.nam-face-on .mod-knob-title,
 .mod-pedal.nam-face-on .mod-enumerated-selected {
   text-shadow: 0 1px 3px #000, 0 0 2px #000;
+}
+
+/* = The tall face of neural-amp-modeler-lv2
+   The face is 560x268 and its controls sit between y 86 and y 268. The tall
+   face adds TALL = 260px at the top: the printed face goes to the bottom
+   (background-position), every control moves down by TALL, and the picture
+   gets y 78-342, which also covers the printed title (y 302-322 once moved). */
+.mod-pedal-nam.nam-face-tall {
+  height: 528px;
+  background-position: center bottom;
+  background-color: #191919;
+}
+.mod-pedal-nam.nam-face-tall .group1 { top: 346px; }
+.mod-pedal-nam.nam-face-tall .group2 { top: 367px; }
+.mod-pedal-nam.nam-face-tall .mod-footswitch { top: 392px; }
+.mod-pedal-nam.nam-face-tall .mod-pedal-input,
+.mod-pedal-nam.nam-face-tall .mod-pedal-output { top: 366px; }
+.mod-pedal-nam.nam-face-tall > .nam-face {
+  top: 14px;
+  height: 56px;
+}
+.mod-pedal-nam.nam-face-tall > .nam-face-backdrop {
+  top: 78px;
+  bottom: auto;
+  height: 264px;
+  padding: 0 24px;
+}
+.mod-pedal-nam.nam-face-tall > .nam-face-backdrop img {
+  filter: none;
+}
+.mod-pedal-nam.nam-face-tall .mod-knob-title,
+.mod-pedal-nam.nam-face-tall .mod-enumerated-selected {
+  text-shadow: none;
 }

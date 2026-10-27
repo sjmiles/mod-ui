@@ -3,14 +3,15 @@
 // @ts-check
 
 /**
- * The NAM pedal face: the pedal of a NAM plugin shows the picture of its
- * current model across the whole face, and its name over the printed title. modgui.js hands every GUI event
+ * The NAM pedal face: the pedal of a NAM plugin grows taller and shows the
+ * picture of its current model above its controls, and its name at the top. modgui.js hands every GUI event
  * of every plugin to `apply` (through js/namface.js); only the plugins with a
  * NAM model parameter get a plate.
  * @module
  */
 
 import * as model from './model.js'
+import { redrawJacks } from './legacy.js'
 
 function addStylesheet() {
     if (document.querySelector('link[data-namface]')) {
@@ -49,17 +50,39 @@ function pedalOf(icon) {
 }
 
 /**
- * The picture fills the whole face, under the knobs, the footswitch and the
- * drop-down: it goes first among the children of the pedal.
+ * With a picture, the pedal grows taller: the picture gets the top of the
+ * face and the controls move down (namface.css). The jacks move with them,
+ * so the cables are drawn again.
+ * @param {HTMLElement} icon
+ * @param {HTMLElement} pedal
+ * @param {boolean} on
+ */
+function setTall(icon, pedal, on) {
+    if (pedal.classList.contains('nam-face-tall') === on) {
+        return
+    }
+    pedal.classList.toggle('nam-face-tall', on)
+    // The board copies the size of the pedal to its wrapper on its own
+    // timer; the cables follow the jacks, which moved now.
+    window.requestAnimationFrame(() => redrawJacks(icon))
+    window.setTimeout(() => redrawJacks(icon), 600)
+}
+
+/**
+ * The picture, in its own area above the controls of a tall face, or behind
+ * them on the face of another plugin. It goes first among the children of
+ * the pedal.
+ * @param {HTMLElement} icon
  * @param {HTMLElement} pedal
  * @param {string|null} image
  */
-function renderBackdrop(pedal, image) {
+function renderBackdrop(icon, pedal, image) {
     const old = findChild(pedal, 'nam-face-backdrop')
     if (!model.isImageUrl(image)) {
         if (old) {
             old.remove()
         }
+        setTall(icon, pedal, false)
         return
     }
     const backdrop = document.createElement('div')
@@ -70,7 +93,10 @@ function renderBackdrop(pedal, image) {
     img.referrerPolicy = 'no-referrer'
     img.src = /** @type {string} */ (image)
     // A picture that cannot load leaves the face as the plugin drew it.
-    img.addEventListener('error', () => backdrop.remove())
+    img.addEventListener('error', () => {
+        backdrop.remove()
+        setTall(icon, pedal, false)
+    })
     // Fit the longest side, keeping the shape of the picture: namface.css
     // sizes the picture from its ratio, which is known once it loads. Until
     // then it stays hidden, so it never shows stretched.
@@ -86,6 +112,7 @@ function renderBackdrop(pedal, image) {
     } else {
         pedal.insertBefore(backdrop, pedal.firstChild)
     }
+    setTall(icon, pedal, true)
 }
 
 /**
@@ -124,7 +151,7 @@ function render(icon, face) {
     const pedal = pedalOf(icon)
     if (!face) {
         pedal.classList.remove('nam-face-on')
-        renderBackdrop(pedal, null)
+        renderBackdrop(icon, pedal, null)
         const old = findChild(pedal, 'nam-face')
         if (old) {
             old.remove()
@@ -133,7 +160,7 @@ function render(icon, face) {
     }
     addStylesheet()
     pedal.classList.add('nam-face-on')
-    renderBackdrop(pedal, face.image)
+    renderBackdrop(icon, pedal, face.image)
     renderPlate(pedal, face)
 }
 
