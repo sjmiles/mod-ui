@@ -3,8 +3,8 @@
 // @ts-check
 
 /**
- * The NAM pedal face: a plate on the pedal of a NAM plugin that shows the
- * picture and the name of its current model. modgui.js hands every GUI event
+ * The NAM pedal face: the pedal of a NAM plugin shows the picture of its
+ * current model across the whole face, and its name over the printed title. modgui.js hands every GUI event
  * of every plugin to `apply` (through js/namface.js); only the plugins with a
  * NAM model parameter get a plate.
  * @module
@@ -25,12 +25,13 @@ function addStylesheet() {
 }
 
 /**
- * @param {HTMLElement} icon
+ * @param {HTMLElement} pedal
+ * @param {string} cls
  * @returns {HTMLElement|null}
  */
-function findPlate(icon) {
-    for (const child of Array.from(icon.children)) {
-        if (child.classList.contains('nam-face')) {
+function findChild(pedal, cls) {
+    for (const child of Array.from(pedal.children)) {
+        if (child.classList.contains(cls)) {
             return /** @type {HTMLElement} */ (child)
         }
     }
@@ -48,51 +49,83 @@ function pedalOf(icon) {
 }
 
 /**
+ * The picture fills the whole face, under the knobs, the footswitch and the
+ * drop-down: it goes first among the children of the pedal.
+ * @param {HTMLElement} pedal
+ * @param {string|null} image
+ */
+function renderBackdrop(pedal, image) {
+    const old = findChild(pedal, 'nam-face-backdrop')
+    if (!model.isImageUrl(image)) {
+        if (old) {
+            old.remove()
+        }
+        return
+    }
+    const backdrop = document.createElement('div')
+    backdrop.className = 'nam-face-backdrop'
+    backdrop.setAttribute('aria-hidden', 'true')
+    const img = document.createElement('img')
+    img.alt = ''
+    img.referrerPolicy = 'no-referrer'
+    img.src = /** @type {string} */ (image)
+    // A picture that cannot load leaves the face as the plugin drew it.
+    img.addEventListener('error', () => backdrop.remove())
+    backdrop.appendChild(img)
+    if (old) {
+        old.replaceWith(backdrop)
+    } else {
+        pedal.insertBefore(backdrop, pedal.firstChild)
+    }
+}
+
+/**
+ * The name of the model, over the printed title of the face.
+ * @param {HTMLElement} pedal
+ * @param {model.Face} face
+ */
+function renderPlate(pedal, face) {
+    const plate = document.createElement('div')
+    plate.className = 'nam-face'
+    plate.setAttribute('aria-hidden', 'true')
+    const title = document.createElement('div')
+    title.className = 'nam-face-title'
+    title.textContent = face.title
+    plate.appendChild(title)
+    const line = model.detailLine(face)
+    if (line) {
+        const detail = document.createElement('div')
+        detail.className = 'nam-face-detail'
+        detail.textContent = line
+        plate.appendChild(detail)
+    }
+    const old = findChild(pedal, 'nam-face')
+    if (old) {
+        old.replaceWith(plate)
+    } else {
+        pedal.appendChild(plate)
+    }
+}
+
+/**
  * @param {HTMLElement} icon
  * @param {model.Face|null} face
  */
 function render(icon, face) {
     const pedal = pedalOf(icon)
-    const old = findPlate(pedal)
     if (!face) {
+        pedal.classList.remove('nam-face-on')
+        renderBackdrop(pedal, null)
+        const old = findChild(pedal, 'nam-face')
         if (old) {
             old.remove()
         }
         return
     }
     addStylesheet()
-    const plate = document.createElement('div')
-    plate.className = 'nam-face'
-    plate.setAttribute('aria-hidden', 'true')
-    if (model.isImageUrl(face.image)) {
-        const img = document.createElement('img')
-        img.className = 'nam-face-image'
-        img.alt = ''
-        img.referrerPolicy = 'no-referrer'
-        img.src = /** @type {string} */ (face.image)
-        // A picture that cannot load leaves the name alone on the plate.
-        img.addEventListener('error', () => img.remove())
-        plate.appendChild(img)
-    }
-    const text = document.createElement('div')
-    text.className = 'nam-face-text'
-    const title = document.createElement('div')
-    title.className = 'nam-face-title'
-    title.textContent = face.title
-    text.appendChild(title)
-    const line = model.detailLine(face)
-    if (line) {
-        const detail = document.createElement('div')
-        detail.className = 'nam-face-detail'
-        detail.textContent = line
-        text.appendChild(detail)
-    }
-    plate.appendChild(text)
-    if (old) {
-        old.replaceWith(plate)
-    } else {
-        pedal.appendChild(plate)
-    }
+    pedal.classList.add('nam-face-on')
+    renderBackdrop(pedal, face.image)
+    renderPlate(pedal, face)
 }
 
 /**
