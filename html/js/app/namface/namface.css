@@ -1,9 +1,9 @@
 /* SPDX-FileCopyrightText: 2012-2023 MOD Audio UG
  * SPDX-License-Identifier: AGPL-3.0-or-later
  *
- * What mount.js puts on the pedal of a NAM plugin: the picture of the current
- * model across the whole face (under the controls, dimmed so that their
- * labels stay readable), and its name on a plate over the top band. Neither
+ * What mount.js puts on the pedal of a NAM plugin: the whole picture of the
+ * current model, as large as the face allows (under the controls, dimmed so
+ * that their labels stay readable), and its name on a plate over the top band. Neither
  * takes clicks, so the pedal still drags from anywhere.
  */
 
@@ -13,26 +13,26 @@
   left: 0;
   right: 0;
   bottom: 0;
-  border-radius: inherit;
-  overflow: hidden;
+  padding: 10px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   pointer-events: none;
   z-index: 0;
 }
+/* The whole picture, fitted by its longest side, in a thin frame. Dimmed so
+   that the labels of the controls on it stay readable. */
 .mod-pedal > .nam-face-backdrop img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
   display: block;
-}
-/* Darker at the bottom, where the drop-down of models sits. */
-.mod-pedal > .nam-face-backdrop::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(rgba(0, 0, 0, 0.25) 0%, rgba(0, 0, 0, 0.35) 60%, rgba(0, 0, 0, 0.8) 82%);
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-radius: 10px;
+  box-sizing: border-box;
+  filter: brightness(0.7);
 }
 
 .mod-pedal > .nam-face {

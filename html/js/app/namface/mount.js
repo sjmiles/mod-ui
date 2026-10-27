@@ -12,6 +12,9 @@
 
 import * as model from './model.js'
 
+/** The padding of the backdrop on both sides, in px (namface.css). */
+const FRAME_INSET = 20
+
 function addStylesheet() {
     if (document.querySelector('link[data-namface]')) {
         return
@@ -71,6 +74,17 @@ function renderBackdrop(pedal, image) {
     img.src = /** @type {string} */ (image)
     // A picture that cannot load leaves the face as the plugin drew it.
     img.addEventListener('error', () => backdrop.remove())
+    // Fit the longest side: as large as the face allows, never cropped.
+    // CSS alone cannot both enlarge a small picture and keep the frame tight
+    // around it, so the size is set once the picture is known.
+    img.addEventListener('load', () => {
+        const size = model.fitSize(img.naturalWidth, img.naturalHeight,
+            backdrop.clientWidth - FRAME_INSET, backdrop.clientHeight - FRAME_INSET)
+        if (size) {
+            img.style.width = size.width + 'px'
+            img.style.height = size.height + 'px'
+        }
+    })
     backdrop.appendChild(img)
     if (old) {
         old.replaceWith(backdrop)

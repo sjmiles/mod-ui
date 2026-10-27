@@ -74,3 +74,19 @@ export function detailLine(face) {
 export function isImageUrl(url) {
     return typeof url === 'string' && (url.startsWith('/nam/image?') || url.startsWith('https://'))
 }
+
+/**
+ * The largest size of a picture that fits a box without cropping.
+ * @param {number} width The picture.
+ * @param {number} height
+ * @param {number} boxWidth
+ * @param {number} boxHeight
+ * @returns {{ width: number, height: number }|null} Null when a side is unknown.
+ */
+export function fitSize(width, height, boxWidth, boxHeight) {
+    if (!(width > 0 && height > 0 && boxWidth > 0 && boxHeight > 0)) {
+        return null
+    }
+    const scale = Math.min(boxWidth / width, boxHeight / height)
+    return { width: Math.floor(width * scale), height: Math.floor(height * scale) }
+}
