@@ -1887,6 +1887,9 @@ class BankSave(JsonRequestHandler):
         save_banks(banks)
         self.write(True)
 
+# Part of the "?v=" of every page, see TemplateHandler.get_version.
+SERVER_START_TIME = int(time.time())
+
 class TemplateHandler(TimelessRequestHandler):
     @gen.coroutine
     def get(self, path):
@@ -1941,7 +1944,10 @@ class TemplateHandler(TimelessRequestHandler):
         if IMAGE_VERSION is not None and len(IMAGE_VERSION) > 1:
             # strip initial 'v' from version if present
             version = IMAGE_VERSION[1:] if IMAGE_VERSION[0] == "v" else IMAGE_VERSION
-            return url_escape(version)
+            # The release alone does not change when deploy.sh copies new
+            # files and restarts the server, so the browser kept the old
+            # scripts. The start time of the server changes with each restart.
+            return url_escape("%s-%d" % (version, SERVER_START_TIME))
         return str(int(time.time()))
 
     def index(self):
