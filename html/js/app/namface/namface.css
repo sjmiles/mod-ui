@@ -18,21 +18,30 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  container-type: size;
   pointer-events: none;
   z-index: 0;
 }
-/* The whole picture, fitted by its longest side, in a thin frame. Dimmed so
+/* The whole picture in its own shape, as large as the face allows (the
+   longest side fits), in a thin frame. --nam-ratio is its width over its
+   height, set by mount.js when it loads; until then it is hidden. Dimmed so
    that the labels of the controls on it stay readable. */
 .mod-pedal > .nam-face-backdrop img {
   display: block;
-  max-width: 100%;
-  max-height: 100%;
-  width: auto;
-  height: auto;
+  flex: none;
+  box-sizing: content-box;
   border: 2px solid rgba(255, 255, 255, 0.35);
   border-radius: 10px;
-  box-sizing: border-box;
+  width: min(100cqw - 4px, (100cqh - 4px) * var(--nam-ratio, 1));
+  height: auto;
+  aspect-ratio: var(--nam-ratio, 1);
+  max-width: none;
+  max-height: none;
+  visibility: hidden;
   filter: brightness(0.7);
+}
+.mod-pedal > .nam-face-backdrop img.nam-face-loaded {
+  visibility: visible;
 }
 
 .mod-pedal > .nam-face {

@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { detailLine, fitSize, isImageUrl, modelParameterUri, modelPathOf } from '../../html/js/app/namface/model.js'
+import { detailLine, isImageUrl, modelParameterUri, modelPathOf } from '../../html/js/app/namface/model.js'
 
 const URI = 'http://github.com/mikeoliphant/neural-amp-modeler-lv2#model'
 
@@ -33,10 +33,3 @@ test('detailLine and isImageUrl', () => {
     assert.ok(!isImageUrl(null))
 })
 
-test('fitSize fits the longest side without cropping', () => {
-    assert.deepEqual(fitSize(240, 160, 540, 248), { width: 372, height: 248 })
-    assert.deepEqual(fitSize(1000, 200, 540, 248), { width: 540, height: 108 })
-    assert.deepEqual(fitSize(800, 800, 540, 248), { width: 248, height: 248 })
-    assert.equal(fitSize(0, 100, 540, 248), null)
-    assert.equal(fitSize(100, 100, 0, 248), null)
-})
