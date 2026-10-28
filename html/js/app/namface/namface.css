@@ -101,9 +101,12 @@
 /* = The tall face of neural-amp-modeler-lv2
    The face is 560x268 and its controls sit between y 86 and y 268. The tall
    face adds TALL = 260px at the top: every control moves down by TALL, and
-   the picture gets y 78-342. */
+   the picture gets y 78-342. It is also 100px narrower (460px): the gap
+   between the two knobs shrinks from 315px to 215px, and the footswitch
+   stays centred between them. */
 .mod-pedal-nam.nam-face-tall {
   /* It ends below the knobs (group1 at 346, about 120 tall). */
+  width: 460px;
   height: 484px;
   /* The printed face (background.png) is a frame of its own, with the
      title, so a part of it would show around the picture. The tall face
@@ -118,11 +121,14 @@
   display: none;
 }
 .mod-pedal-nam.nam-face-tall .group1 { top: 346px; }
-.mod-pedal-nam.nam-face-tall .mod-footswitch { top: 392px; }
+.mod-pedal-nam.nam-face-tall .mod-control-group .mod-knob:last-child { margin-left: 215px; }
+.mod-pedal-nam.nam-face-tall .mod-footswitch { top: 392px; left: 189px; }
 .mod-pedal-nam.nam-face-tall .mod-pedal-input,
 .mod-pedal-nam.nam-face-tall .mod-pedal-output { top: 366px; }
 .mod-pedal-nam.nam-face-tall > .nam-face {
   top: 14px;
+  left: 40px;
+  right: 40px;
   height: 56px;
 }
 .mod-pedal-nam.nam-face-tall > .nam-face-backdrop {
