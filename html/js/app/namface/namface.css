@@ -140,6 +140,13 @@
 .mod-pedal-nam.nam-face-tall > .nam-face-backdrop img {
   filter: none;
 }
+/* With the tone stack (neural-amp-modeler-lv2 with Bass, Middle and Treble),
+   the three smaller tone knobs (64px) sit between the two level knobs, with
+   11px between all five, and the footswitch goes under Middle, at the
+   centre. */
+.mod-pedal-nam.nam-face-tall:has([mod-port-symbol="bass"]) .group1 { left: 12px; }
+.mod-pedal-nam.nam-face-tall:has([mod-port-symbol="bass"]) .mod-control-group .mod-knob:not(:first-child) { margin-left: 7px; }
+.mod-pedal-nam.nam-face-tall:has([mod-port-symbol="bass"]) .mod-footswitch { top: 436px; left: 195px; }
 /* The label sits right above the knob, which is drawn in the middle of
    its 100px image, not at the top of the image, near the picture. */
 .mod-pedal-nam.nam-face-tall .mod-knob-title {
