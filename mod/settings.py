@@ -118,6 +118,13 @@ PATCHSTORAGE_ENABLED=bool(int(os.environ.get('PATCHSTORAGE_ENABLED', True)))
 PATCHSTORAGE_API_URL=os.environ.get('PATCHSTORAGE_API_URL', 'http://localhost/api/beta/patches')
 PATCHSTORAGE_PLATFORM_ID=os.environ.get('PATCHSTORAGE_PLATFORM_ID', 5027)
 PATCHSTORAGE_TARGET_ID=os.environ.get('PATCHSTORAGE_TARGET_ID', 5037)
+# TONE3000 (NAM model catalog). The client id is a publishable key and is safe
+# to ship; the secret key of the account must never be on the device.
+TONE3000_ENABLED=bool(int(os.environ.get('TONE3000_ENABLED', True)))
+TONE3000_API_URL=os.environ.get('TONE3000_API_URL', 'https://www.tone3000.com/api/v1')
+TONE3000_CLIENT_ID=os.environ.get('TONE3000_CLIENT_ID', 't3k_pub_QelZOr1nXlfhsJsrZpN0JbP6VsD9Wr2l')
+TONE3000_TOKENS_FILE=os.path.join(DATA_DIR, 'tone3000.json')
+
 BLOKAS_ENABLED=bool(int(os.environ.get('BLOKAS_ENABLED', True)))
 BLOKAS_APT_PACKAGE=os.environ.get('BLOKAS_APT_PACKAGE', 'modep-mod-ui')
 BLOKAS_UPDATE_CHECK_URL=os.environ.get('BLOKAS_UPDATE_CHECK_URL', 'https://blokas.io/modep/version/v1/')

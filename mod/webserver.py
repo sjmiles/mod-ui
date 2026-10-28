@@ -56,6 +56,11 @@ from mod.sfzbuilder import (
     list_bank_samples, list_device_samples, list_usb_samples, create_bank, build_bank,
     load_bank, rename_bank, delete_bank,
 )
+from mod.nam import (cover_for as nam_cover_for, find_model_parameter, list_models as nam_list_models,
+                     model_face as nam_model_face)
+from mod.tone3000 import (Tone3000Error, SELECT_CALLBACK_PATH as TONE3000_SELECT_CALLBACK_PATH,
+                          model_summary as tone3000_model_summary, select_page as tone3000_select_page)
+from mod.tone3000_client import TONE3000
 from mod.session import SESSION
 from modtools.utils import (
     kPedalboardInfoUserOnly, kPedalboardInfoFactoryOnly, kPedalboardInfoBoth,
@@ -1882,6 +1887,9 @@ class BankSave(JsonRequestHandler):
         save_banks(banks)
         self.write(True)
 
+# Part of the "?v=" of every page, see TemplateHandler.get_version.
+SERVER_START_TIME = int(time.time())
+
 class TemplateHandler(TimelessRequestHandler):
     @gen.coroutine
     def get(self, path):
@@ -1936,7 +1944,10 @@ class TemplateHandler(TimelessRequestHandler):
         if IMAGE_VERSION is not None and len(IMAGE_VERSION) > 1:
             # strip initial 'v' from version if present
             version = IMAGE_VERSION[1:] if IMAGE_VERSION[0] == "v" else IMAGE_VERSION
-            return url_escape(version)
+            # The release alone does not change when deploy.sh copies new
+            # files and restarts the server, so the browser kept the old
+            # scripts. The start time of the server changes with each restart.
+            return url_escape("%s-%d" % (version, SERVER_START_TIME))
         return str(int(time.time()))
 
     def index(self):
@@ -2594,6 +2605,194 @@ class FilesList(JsonRequestHandler):
             'files': tuple(retfiles[fn] for fn in fullnames),
         })
 
+class NamModelsList(JsonRequestHandler):
+    # Hints for spotting NAM plugins in the plugin list without asking lilv for
+    # the full info of every installed plugin.
+    plugin_uri_hints = ("neural", "nam")
+
+    def _get_nam_plugin(self):
+        for uri in get_plugin_list():
+            luri = uri.lower()
+            if not any(hint in luri for hint in self.plugin_uri_hints):
+                continue
+            try:
+                info = get_plugin_info(uri)
+            except:
+                continue
+            parameter = find_model_parameter(info)
+            if parameter is not None:
+                return {
+                    'uri': uri,
+                    'label': info['label'] or info['name'],
+                    'parameter': parameter,
+                }
+        return None
+
+    def get(self):
+        self.write({
+            'ok': True,
+            'plugin': self._get_nam_plugin(),
+            'models': nam_list_models(),
+        })
+
+class NamModelFace(JsonRequestHandler):
+    # What the pedal face of the NAM plugin shows for its current model.
+    def get(self):
+        face = nam_model_face(self.get_argument('path', ''))
+        self.write({'ok': face is not None, 'face': face})
+
+class NamModelImage(web.RequestHandler):
+    def get(self):
+        cover = nam_cover_for(self.get_argument('path', ''))
+        if cover is None:
+            raise web.HTTPError(404)
+        path, content_type = cover
+        with open(path, 'rb') as fh:
+            body = fh.read()
+        self.set_header('Content-Type', content_type)
+        self.set_header('Cache-Control', 'no-cache')
+        self.write(body)
+
+class Tone3000Handler(JsonRequestHandler):
+    # Every call to TONE3000 goes through the device, which holds the tokens.
+    # An error is an answer with ok false, so the panel can say what went wrong.
+
+    def write_error_message(self, error):
+        if isinstance(error, Tone3000Error):
+            message = str(error)
+        else:
+            print("ERROR in TONE3000 handler:", repr(error))
+            message = "Cannot reach TONE3000. Is the device online?"
+        self.write({'ok': False, 'error': message, 'status': TONE3000.status()})
+
+    def read_json_body(self):
+        try:
+            data = json.loads(self.request.body.decode("utf-8", errors="ignore") or "{}")
+        except ValueError:
+            raise web.HTTPError(400)
+        if not isinstance(data, dict):
+            raise web.HTTPError(400)
+        return data
+
+class Tone3000Status(Tone3000Handler):
+    def get(self):
+        self.write({'ok': True, 'status': TONE3000.status()})
+
+class Tone3000SignIn(Tone3000Handler):
+    @gen.coroutine
+    def post(self):
+        try:
+            status = yield TONE3000.start_sign_in()
+        except Exception as e:
+            self.write_error_message(e)
+            return
+        self.write({'ok': True, 'status': status})
+
+class Tone3000SignOut(Tone3000Handler):
+    def post(self):
+        TONE3000.disconnect()
+        self.write({'ok': True, 'status': TONE3000.status()})
+
+class Tone3000Tones(Tone3000Handler):
+    @gen.coroutine
+    def get(self):
+        try:
+            page = max(1, int(self.get_argument('page', '1')))
+        except ValueError:
+            page = 1
+        try:
+            data = yield TONE3000.list_tones(self.get_argument('list', 'favorited'),
+                                             self.get_argument('gear', None),
+                                             self.get_argument('query', None),
+                                             page)
+        except Exception as e:
+            self.write_error_message(e)
+            return
+        data['ok'] = True
+        self.write(data)
+
+class Tone3000Models(Tone3000Handler):
+    @gen.coroutine
+    def get(self):
+        try:
+            tone_id = int(self.get_argument('tone_id'))
+        except ValueError:
+            raise web.HTTPError(400)
+        try:
+            models = yield TONE3000.list_models(tone_id)
+        except Exception as e:
+            self.write_error_message(e)
+            return
+        self.write({'ok': True, 'models': [tone3000_model_summary(m) for m in models]})
+
+class Tone3000Tone(Tone3000Handler):
+    @gen.coroutine
+    def get(self):
+        try:
+            tone_id = int(self.get_argument('id'))
+        except ValueError:
+            raise web.HTTPError(400)
+        try:
+            tone = yield TONE3000.get_tone(tone_id)
+        except Exception as e:
+            self.write_error_message(e)
+            return
+        self.write({'ok': True, 'tone': tone})
+
+class Tone3000SelectStart(web.RequestHandler):
+    # Opened in a window of its own: sends the browser on to TONE3000's picker,
+    # which sends it back to Tone3000SelectDone on this same address.
+    def get(self):
+        redirect_uri = "%s://%s%s" % (self.request.protocol, self.request.host, TONE3000_SELECT_CALLBACK_PATH)
+        try:
+            url = TONE3000.start_select(redirect_uri, self.get_argument('gear', None))
+        except Tone3000Error as e:
+            self.set_header('Cache-Control', 'no-store')
+            self.write(tone3000_select_page({'error': str(e)}))
+            return
+        self.set_header('Cache-Control', 'no-store')
+        self.redirect(url)
+
+class Tone3000SelectDone(web.RequestHandler):
+    @gen.coroutine
+    def get(self):
+        self.set_header('Cache-Control', 'no-store')
+        try:
+            tone_id = yield TONE3000.finish_select(self.get_argument('state', None),
+                                                   self.get_argument('code', None),
+                                                   self.get_argument('tone_id', None),
+                                                   self.get_argument('error', None))
+        except Tone3000Error as e:
+            result = {'error': str(e)}
+        except ValueError:
+            result = {'error': "TONE3000 sent back a tone the pedal cannot read."}
+        except Exception as e:
+            print("ERROR in TONE3000 pick:", repr(e))
+            result = {'error': "Cannot reach TONE3000. Is the device online?"}
+        else:
+            result = {'tone_id': tone_id} if tone_id is not None else {'canceled': True}
+        self.write(tone3000_select_page(result))
+
+class Tone3000Download(Tone3000Handler):
+    @gen.coroutine
+    def post(self):
+        data = self.read_json_body()
+        try:
+            tone_id = int(data.get('tone_id'))
+            model_ids = [int(i) for i in data.get('model_ids') or []]
+        except (TypeError, ValueError):
+            raise web.HTTPError(400)
+        if not model_ids:
+            self.write({'ok': False, 'error': "Pick at least one model"})
+            return
+        try:
+            result = yield TONE3000.download(tone_id, model_ids)
+        except Exception as e:
+            self.write_error_message(e)
+            return
+        result['ok'] = True
+        self.write(result)
+
 settings = {'log_function': lambda handler: None} if not LOG else {}
 
 application = web.Application(
@@ -2691,6 +2890,18 @@ application = web.Application(
 
             # file listing etc
             (r"/files/list/?", FilesList),
+            (r"/nam/models/?", NamModelsList),
+            (r"/nam/face/?", NamModelFace),
+            (r"/nam/image/?", NamModelImage),
+            (r"/tone3000/status/?", Tone3000Status),
+            (r"/tone3000/signin/?", Tone3000SignIn),
+            (r"/tone3000/signout/?", Tone3000SignOut),
+            (r"/tone3000/tones/?", Tone3000Tones),
+            (r"/tone3000/models/?", Tone3000Models),
+            (r"/tone3000/download/?", Tone3000Download),
+            (r"/tone3000/tone/?", Tone3000Tone),
+            (r"/tone3000/select/start/?", Tone3000SelectStart),
+            (r"/tone3000/select/done/?", Tone3000SelectDone),
 
             # sfz sound-bank builder
             (r"/sfzbuilder/banks/?", SfzBuilderBanks),

@@ -696,8 +696,9 @@ JqueryClass('pedalboard', {
      * Parameters are:
      *   - Plugin is a data structure as parsed by mod-python's modcommon.lv2.Plugin class.
      *   - draggableOptions will be passed as parameter to the draggable jquery ui plugin
+     *   - loadedCallback, if given, is called with the new instance once the plugin is loaded
      */
-    registerAvailablePlugin: function (element, pluginData, draggableOptions) {
+    registerAvailablePlugin: function (element, pluginData, draggableOptions, loadedCallback) {
         var self = $(this)
 
         element.bind('pluginAdded', function (e, position) {
@@ -714,6 +715,8 @@ JqueryClass('pedalboard', {
                     }, 1)
                     */
                     waiter.stopPlugin(instance, false)
+                    if (loadedCallback)
+                        loadedCallback(instance)
                 },
                 function () {
                     self.data('replacementPlugin', null)
@@ -836,6 +839,22 @@ JqueryClass('pedalboard', {
         self.pedalboard('adapt', true)
 
         return true
+    },
+
+    // Keeps a strip on the right of the window free, for the plugin bar
+    // when it is docked there. The pedalboard and its hardware ports end
+    // where the strip starts.
+    setRightMargin: function (margin) {
+        var self = $(this)
+        if (self.data('hmargins') === undefined)
+            return
+        var old = self.data('rightMargin') || 0
+        if (margin == old)
+            return
+        self.data('rightMargin', margin)
+        self.data('hmargins', self.data('hmargins') + margin - old)
+        self.pedalboard('fitToWindow')
+        self.pedalboard('positionHardwarePorts')
     },
 
     // Prevents dragging of whole dashboard when dragging of effect or jack starts
