@@ -105,9 +105,10 @@
    between the two knobs shrinks from 315px to 215px, and the footswitch
    stays centred between them. */
 .mod-pedal-nam.nam-face-tall {
-  /* It ends below the knobs (group1 at 362, about 120 tall). */
+  /* It ends close below the knobs: group1 starts at 362 and the knob, drawn
+     in the middle of its 100px image under a title, ends near y 462. */
   width: 460px;
-  height: 500px;
+  height: 484px;
   /* The printed face (background.png) is a frame of its own, with the
      title, so a part of it would show around the picture. The tall face
      has one plain body instead. */
@@ -123,8 +124,9 @@
 .mod-pedal-nam.nam-face-tall .group1 { top: 362px; }
 .mod-pedal-nam.nam-face-tall .mod-control-group .mod-knob:last-child { margin-left: 215px; }
 .mod-pedal-nam.nam-face-tall .mod-footswitch { top: 408px; left: 189px; }
+/* Centred on the height of 484, as on the plain face (top 106 of 268). */
 .mod-pedal-nam.nam-face-tall .mod-pedal-input,
-.mod-pedal-nam.nam-face-tall .mod-pedal-output { top: 382px; }
+.mod-pedal-nam.nam-face-tall .mod-pedal-output { top: 214px; }
 .mod-pedal-nam.nam-face-tall > .nam-face {
   top: 14px;
   left: 40px;
