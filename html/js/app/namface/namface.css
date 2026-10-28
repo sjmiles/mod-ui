@@ -1,0 +1,149 @@
+/* SPDX-FileCopyrightText: 2012-2023 MOD Audio UG
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ *
+ * What mount.js puts on the pedal of a NAM plugin: the name of the current
+ * model on a plate at the top, and its whole picture. On the face of
+ * neural-amp-modeler-lv2 the pedal grows taller and the picture gets its own
+ * area above the controls; on any other face it sits behind the controls,
+ * dimmed so that their labels stay readable. Neither
+ * takes clicks, so the pedal still drags from anywhere.
+ */
+
+.mod-pedal > .nam-face-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 10px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  container-type: size;
+  pointer-events: none;
+  z-index: 0;
+}
+/* The whole picture in its own shape, as large as the face allows (the
+   longest side fits), in a thin frame. --nam-ratio is its width over its
+   height, set by mount.js when it loads; until then it is hidden. Dimmed so
+   that the labels of the controls on it stay readable. */
+.mod-pedal > .nam-face-backdrop img {
+  display: block;
+  flex: none;
+  box-sizing: content-box;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-radius: 10px;
+  width: min(100cqw - 4px, (100cqh - 4px) * var(--nam-ratio, 1));
+  height: auto;
+  aspect-ratio: var(--nam-ratio, 1);
+  max-width: none;
+  max-height: none;
+  visibility: hidden;
+  filter: brightness(0.7);
+}
+.mod-pedal > .nam-face-backdrop img.nam-face-loaded {
+  visibility: visible;
+}
+
+.mod-pedal > .nam-face {
+  position: absolute;
+  top: 12px;
+  left: 8%;
+  right: 8%;
+  height: 58px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 4px 16px;
+  box-sizing: border-box;
+  background: rgba(8, 8, 8, 0.72);
+  border-radius: 10px;
+  text-align: center;
+  pointer-events: none;
+  z-index: 1;
+  overflow: hidden;
+}
+
+/* The face of neural-amp-modeler-lv2 (560x268): the plate covers the printed
+   "NEURAL AMP MODELER" title (x 88-473, y 42-62) and stops above the knob
+   titles, which start at y 86. */
+.mod-pedal-nam > .nam-face {
+  top: 22px;
+  left: 88px;
+  right: 87px;
+}
+
+.mod-pedal > .nam-face .nam-face-title {
+  color: #fff;
+  font-size: 18px;
+  font-weight: bold;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mod-pedal > .nam-face .nam-face-detail {
+  color: #d0d0d0;
+  font-size: 13px;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The knob titles and the chosen model sit on the picture now. */
+.mod-pedal.nam-face-on .mod-knob-title,
+.mod-pedal.nam-face-on .mod-enumerated-selected {
+  text-shadow: 0 1px 3px #000, 0 0 2px #000;
+}
+
+/* = The tall face of neural-amp-modeler-lv2
+   The face is 560x268 and its controls sit between y 86 and y 268. The tall
+   face adds TALL = 260px at the top: every control moves down by TALL, and
+   the picture gets y 78-342. It is also 100px narrower (460px): the gap
+   between the two knobs shrinks from 315px to 215px, and the footswitch
+   stays centred between them. */
+.mod-pedal-nam.nam-face-tall {
+  /* It ends below the knobs (group1 at 346, about 120 tall). */
+  width: 460px;
+  height: 484px;
+  /* The printed face (background.png) is a frame of its own, with the
+     title, so a part of it would show around the picture. The tall face
+     has one plain body instead. */
+  background-color: #1a1a1a;
+  background-image: linear-gradient(#202020, #141414);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+}
+/* No model drop-down: the plate at the top names the model, and the
+   settings of the plugin (its gear icon) still change it. */
+.mod-pedal-nam.nam-face-tall .group2 {
+  display: none;
+}
+.mod-pedal-nam.nam-face-tall .group1 { top: 346px; }
+.mod-pedal-nam.nam-face-tall .mod-control-group .mod-knob:last-child { margin-left: 215px; }
+.mod-pedal-nam.nam-face-tall .mod-footswitch { top: 392px; left: 189px; }
+.mod-pedal-nam.nam-face-tall .mod-pedal-input,
+.mod-pedal-nam.nam-face-tall .mod-pedal-output { top: 366px; }
+.mod-pedal-nam.nam-face-tall > .nam-face {
+  top: 14px;
+  left: 40px;
+  right: 40px;
+  height: 56px;
+}
+.mod-pedal-nam.nam-face-tall > .nam-face-backdrop {
+  top: 78px;
+  bottom: auto;
+  height: 264px;
+  padding: 0 24px;
+}
+.mod-pedal-nam.nam-face-tall > .nam-face-backdrop img {
+  filter: none;
+}
+/* The label sits right above the knob, which is drawn in the middle of
+   its 100px image, not at the top of the image, near the picture. */
+.mod-pedal-nam.nam-face-tall .mod-knob-title {
+  text-shadow: none;
+  position: relative;
+  top: 16px;
+}

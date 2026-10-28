@@ -841,6 +841,22 @@ JqueryClass('pedalboard', {
         return true
     },
 
+    // Keeps a strip on the right of the window free, for the plugin bar
+    // when it is docked there. The pedalboard and its hardware ports end
+    // where the strip starts.
+    setRightMargin: function (margin) {
+        var self = $(this)
+        if (self.data('hmargins') === undefined)
+            return
+        var old = self.data('rightMargin') || 0
+        if (margin == old)
+            return
+        self.data('rightMargin', margin)
+        self.data('hmargins', self.data('hmargins') + margin - old)
+        self.pedalboard('fitToWindow')
+        self.pedalboard('positionHardwarePorts')
+    },
+
     // Prevents dragging of whole dashboard when dragging of effect or jack starts
     preventDrag: function (prevent) {
         $(this).data('preventDrag', prevent)
