@@ -60,6 +60,17 @@ DOWNLOAD_TIMEOUT = 120
 
 MAX_NAME_LENGTH = 80
 
+# The picture of a tone, saved next to its models so the pedal face of the NAM
+# plugin can show it without the network.
+COVER_BASENAME = "cover"
+COVER_TYPES = {
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+    "image/gif": ".gif",
+}
+MAX_COVER_BYTES = 4 * 1024 * 1024
+
 
 class Tone3000Error(Exception):
     def __init__(self, message, status=None):
@@ -237,7 +248,14 @@ def model_filename(model, taken):
     return name
 
 
-def sidecar_for(tone, files):
+def cover_extension(content_type, body):
+    # The file extension for a downloaded picture, or None if it is not one.
+    if not body or len(body) > MAX_COVER_BYTES:
+        return None
+    return COVER_TYPES.get((content_type or "").split(";")[0].strip().lower())
+
+
+def sidecar_for(tone, files, image=None):
     return {
         'source': "tone3000",
         'tone_id': tone['id'],
@@ -247,8 +265,13 @@ def sidecar_for(tone, files):
         'image_url': tone['image_url'],
         'creator': tone['creator'],
         'models': files,
+        'image': image,
         'downloaded_at': int(time.time()),
     }
+
+
+def is_cover_name(name):
+    return isinstance(name, str) and name in [COVER_BASENAME + ext for ext in COVER_TYPES.values()]
 
 
 def read_json(path):
@@ -285,6 +308,8 @@ class ToneFolder(object):
         previous = read_json(os.path.join(self.path, SIDECAR_NAME)) or {}
         self.files = dict((str(k), v) for k, v in (previous.get("models") or {}).items()
                           if isinstance(v, dict) and v.get("file"))
+        image = previous.get("image")
+        self.image = image if is_cover_name(image) and os.path.isfile(os.path.join(self.path, image)) else None
 
     def existing(self, model_id):
         # The path of a model that an earlier download already wrote, or None.
@@ -307,6 +332,20 @@ class ToneFolder(object):
         self.files[str(summary['id'])] = entry
         return path
 
+    def set_image(self, body, extension):
+        os.makedirs(self.path, exist_ok=True)
+        name = COVER_BASENAME + extension
+        path = os.path.join(self.path, name)
+        with open(path + ".part", 'wb') as fh:
+            fh.write(body)
+        os.replace(path + ".part", path)
+        if self.image and self.image != name:
+            try:
+                os.remove(os.path.join(self.path, self.image))
+            except OSError:
+                pass
+        self.image = name
+
     def save(self):
         os.makedirs(self.path, exist_ok=True)
-        write_json(os.path.join(self.path, SIDECAR_NAME), sidecar_for(self.tone, self.files))
+        write_json(os.path.join(self.path, SIDECAR_NAME), sidecar_for(self.tone, self.files, self.image))

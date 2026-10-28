@@ -56,7 +56,8 @@ from mod.sfzbuilder import (
     list_bank_samples, list_device_samples, list_usb_samples, create_bank, build_bank,
     load_bank, rename_bank, delete_bank,
 )
-from mod.nam import find_model_parameter, list_models as nam_list_models
+from mod.nam import (cover_for as nam_cover_for, find_model_parameter, list_models as nam_list_models,
+                     model_face as nam_model_face)
 from mod.tone3000 import (Tone3000Error, SELECT_CALLBACK_PATH as TONE3000_SELECT_CALLBACK_PATH,
                           model_summary as tone3000_model_summary, select_page as tone3000_select_page)
 from mod.tone3000_client import TONE3000
@@ -1886,6 +1887,9 @@ class BankSave(JsonRequestHandler):
         save_banks(banks)
         self.write(True)
 
+# Part of the "?v=" of every page, see TemplateHandler.get_version.
+SERVER_START_TIME = int(time.time())
+
 class TemplateHandler(TimelessRequestHandler):
     @gen.coroutine
     def get(self, path):
@@ -1940,7 +1944,10 @@ class TemplateHandler(TimelessRequestHandler):
         if IMAGE_VERSION is not None and len(IMAGE_VERSION) > 1:
             # strip initial 'v' from version if present
             version = IMAGE_VERSION[1:] if IMAGE_VERSION[0] == "v" else IMAGE_VERSION
-            return url_escape(version)
+            # The release alone does not change when deploy.sh copies new
+            # files and restarts the server, so the browser kept the old
+            # scripts. The start time of the server changes with each restart.
+            return url_escape("%s-%d" % (version, SERVER_START_TIME))
         return str(int(time.time()))
 
     def index(self):
@@ -2628,6 +2635,24 @@ class NamModelsList(JsonRequestHandler):
             'models': nam_list_models(),
         })
 
+class NamModelFace(JsonRequestHandler):
+    # What the pedal face of the NAM plugin shows for its current model.
+    def get(self):
+        face = nam_model_face(self.get_argument('path', ''))
+        self.write({'ok': face is not None, 'face': face})
+
+class NamModelImage(web.RequestHandler):
+    def get(self):
+        cover = nam_cover_for(self.get_argument('path', ''))
+        if cover is None:
+            raise web.HTTPError(404)
+        path, content_type = cover
+        with open(path, 'rb') as fh:
+            body = fh.read()
+        self.set_header('Content-Type', content_type)
+        self.set_header('Cache-Control', 'no-cache')
+        self.write(body)
+
 class Tone3000Handler(JsonRequestHandler):
     # Every call to TONE3000 goes through the device, which holds the tokens.
     # An error is an answer with ok false, so the panel can say what went wrong.
@@ -2866,6 +2891,8 @@ application = web.Application(
             # file listing etc
             (r"/files/list/?", FilesList),
             (r"/nam/models/?", NamModelsList),
+            (r"/nam/face/?", NamModelFace),
+            (r"/nam/image/?", NamModelImage),
             (r"/tone3000/status/?", Tone3000Status),
             (r"/tone3000/signin/?", Tone3000SignIn),
             (r"/tone3000/signout/?", Tone3000SignOut),

@@ -303,6 +303,9 @@ $('document').ready(function() {
         console.log('DEV Mode Enabled')
         enable_dev_mode(true)
     }
+    if (PREFERENCES['plugins-dock'] == "right") {
+        desktop.effectBox.effectBox('setDock', 'right')
+    }
     if (PREFERENCES['plugins-folded'] == "true") {
         desktop.effectBox.effectBox('toggle')
     }
@@ -377,6 +380,7 @@ $('document').ready(function() {
 <script type="text/javascript" src="js/banks.js?v={{version}}"></script>
 <script type="text/javascript" src="js/sfzbuilder.js?v={{version}}"></script>
 <script type="text/javascript" src="js/tone3000.js?v={{version}}"></script>
+<script type="text/javascript" src="js/namface.js?v={{version}}"></script>
 <script type="text/javascript" src="js/effects.js?v={{version}}"></script>
 <script type="text/javascript" src="js/cloudplugin.js?v={{version}}"></script>
 <script type="text/javascript" src="js/patchstorage.js?v={{version}}"></script>
@@ -797,6 +801,7 @@ $('document').ready(function() {
         </ul>
         <span class="js-settings-trigger settings selected"></span>
         <span class="js-effects-fold fold"></span>
+        <span class="js-effects-dock dock" title="Dock on the right as a grid"></span>
         <!-- END EFFECTS MENU ITEMS -->
 
         <!-- EFFECTS LIBRARY SETTINGS WINDOW -->

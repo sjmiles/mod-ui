@@ -113,6 +113,12 @@ JqueryClass('effectBox', {
             options.saveConfigValue("plugins-folded", self.hasClass('folded') ? "true" : "false")
         })
 
+        self.find('.js-effects-dock').click(function () {
+            var side = self.hasClass('dock-right') ? 'bottom' : 'right'
+            self.effectBox('setDock', side)
+            options.saveConfigValue("plugins-dock", side)
+        })
+
         self.find('.nav-left').click(function () {
             self.effectBox('shiftLeft')
         })
@@ -128,6 +134,9 @@ JqueryClass('effectBox', {
 
         // CATEGORY SCROLL
         self.on('DOMMouseScroll mousewheel', function ( event ) {
+            // docked on the right, the grid scrolls by itself
+            if (self.hasClass('dock-right'))
+                return
             if( event.originalEvent.detail > 0 || event.originalEvent.wheelDelta < 0 )
                 self.effectBox('shiftNext');
             else
@@ -145,8 +154,9 @@ JqueryClass('effectBox', {
         }
 
         // IntersectionObserver with root=#plugins-results so images are only fetched
-        // when they actually enter the clipped viewport of the horizontal strip, not
-        // when they're merely present in the DOM off to the side.
+        // when they actually enter the clipped viewport of the horizontal strip (or of
+        // the grid, when docked on the right), not when they're merely present in the
+        // DOM off to the side.
         var pluginsResults = self.find('#plugins-results')[0]
         var thumbnailObserver = new IntersectionObserver(function (entries) {
             for (var i = 0; i < entries.length; i++) {
@@ -158,7 +168,7 @@ JqueryClass('effectBox', {
             }
         }, {
             root: pluginsResults,
-            rootMargin: '0px 300px 0px 300px',
+            rootMargin: '300px',
             threshold: 0
         })
         self.data('thumbnailObserver', thumbnailObserver)
@@ -194,6 +204,28 @@ JqueryClass('effectBox', {
         } else
             self.effectBox('fold')
         self.toggleClass("auto");
+        self.effectBox('reserveSpace')
+    },
+
+    // The bar sits along the bottom (a strip that scrolls sideways) or on the
+    // right (a grid that scrolls down).
+    setDock: function (side) {
+        var self = $(this)
+        self.toggleClass('dock-right', side == 'right')
+        self.find('.js-effects-dock').attr('title', side == 'right' ? 'Dock along the bottom' : 'Dock on the right as a grid')
+        self.find('.plugins-wrapper').data('pos', 0).data('plug', 0)
+        self.effectBox('resetShift')
+        self.effectBox('reserveSpace')
+        self.effectBox('showNamModels')
+    },
+
+    // Docked on the right and pinned open, the pedalboard makes room for the
+    // grid. When it hides itself it floats over the pedalboard instead, like
+    // the bottom strip does.
+    reserveSpace: function () {
+        var self = $(this)
+        var margin = (self.hasClass('dock-right') && !self.hasClass('auto')) ? self.outerWidth() : 0
+        self.data('pedalboard').pedalboard('setRightMargin', margin)
     },
 
     mouseEnter: function (e) {
@@ -465,8 +497,22 @@ JqueryClass('effectBox', {
                 return
             }
 
-            for (var i in models) {
-                self.effectBox('renderNamModel', models[i], pluginData, nam.parameter, container)
+            // the bottom strip lists every model; the grid groups the flavors
+            if (!self.hasClass('dock-right')) {
+                for (var i in models) {
+                    self.effectBox('renderNamModel', models[i], pluginData, nam.parameter, container)
+                }
+                if (self.data('category') == 'NAM')
+                    self.effectBox('calculateNavigation')
+                return
+            }
+
+            var groups = self.effectBox('groupNamModels', models)
+            for (var i in groups) {
+                if (groups[i].models.length == 1)
+                    self.effectBox('renderNamModel', groups[i].models[0], pluginData, nam.parameter, container)
+                else
+                    self.effectBox('renderNamGroup', groups[i], pluginData, nam.parameter, container, !!term)
             }
             if (self.data('category') == 'NAM')
                 self.effectBox('calculateNavigation')
@@ -500,10 +546,108 @@ JqueryClass('effectBox', {
         })
     },
 
-    renderNamModel: function (model, plugin, parameterUri, container) {
+    // The flavors of one tone (its sizes and variants) share a folder, so the
+    // models of a folder make one group. Models at the top of the library each
+    // stand alone.
+    groupNamModels: function (models) {
+        var groups = [], byFolder = {}
+        for (var i in models) {
+            var model = models[i]
+            var group = model.folder ? byFolder[model.folder] : null
+            if (!group) {
+                var folder = model.folder || ''
+                group = {
+                    key: folder,
+                    title: (model.tone3000 && model.tone3000.title) || folder.split('/').pop() || model.label,
+                    models: [],
+                }
+                groups.push(group)
+                if (model.folder)
+                    byFolder[model.folder] = group
+            }
+            group.models.push(model)
+        }
+        return groups
+    },
+
+    namOpenGroups: function () {
+        try {
+            var open = JSON.parse(localStorage.getItem('nam-open-groups') || '[]')
+            return Array.isArray(open) ? open : []
+        } catch (e) {
+            return []
+        }
+    },
+
+    // In the grid, a group shows as a header that opens and closes, followed by its models.
+    // Which groups are open is remembered in this browser.
+    renderNamGroup: function (group, plugin, parameterUri, container, forceOpen) {
         var self = $(this)
+        var first = group.models[0]
+        var gear = [first.gear_make, first.gear_model].filter(Boolean).join(' ')
+
+        var div = document.createElement("div");
+        div.innerHTML = Mustache.render(TEMPLATES.nam_group, {
+            title: group.title,
+            subtitle: group.models.length + ' flavors',
+            tooltip: [group.title, gear, group.models.length + ' flavors'].filter(Boolean).join(' \u00b7 '),
+            count: group.models.length,
+            thumbnail_href: self.effectBox('namThumbnail', first, plugin),
+        });
+        var rendered = $(div).children('.nam-group')
+        var items = rendered.find('.nam-group-items')
+
+        for (var i in group.models) {
+            self.effectBox('renderNamModel', group.models[i], plugin, parameterUri, items,
+                           self.effectBox('namFlavorLabel', group.models[i].label, group.title))
+        }
+
+        if (forceOpen || self.effectBox('namOpenGroups').indexOf(group.key) >= 0)
+            rendered.addClass('open')
+
+        rendered.find('.nam-group-header').click(function () {
+            rendered.toggleClass('open')
+            var open = self.effectBox('namOpenGroups').filter(function (key) {
+                return key != group.key
+            })
+            if (rendered.hasClass('open'))
+                open.push(group.key)
+            try {
+                localStorage.setItem('nam-open-groups', JSON.stringify(open))
+            } catch (e) {}
+            self.effectBox('calculateNavigation')
+        })
+
+        container.append(rendered)
+
+        var img = rendered.find('.nam-group-header img[data-src]')[0]
+        if (img) self.data('thumbnailObserver').observe(img)
+    },
+
+    // Inside its group a model is named by what sets it apart from the
+    // group, so "Twin Clean (Lite)" in the "Twin Clean" group shows as "Lite".
+    namFlavorLabel: function (label, title) {
+        if (!label || label.toLowerCase().indexOf(title.toLowerCase()) != 0)
+            return label
+        var rest = label.substr(title.length).replace(/^[\s\-_:,.\u00b7]+/, '').replace(/^\((.*)\)$/, '$1').trim()
+        return rest || label
+    },
+
+    namThumbnail: function (model, plugin) {
         var uri = escape(plugin.uri)
         var ver = [plugin.builder, plugin.microVersion, plugin.minorVersion, plugin.release].join('_')
+        return model.image
+             ? model.image
+             : (model.tone3000 && model.tone3000.image_url)
+             ? model.tone3000.image_url
+             : (plugin.gui && plugin.gui.thumbnail)
+               ? ("/effect/image/thumbnail.png?uri=" + uri + "&v=" + ver)
+               : "/resources/pedals/default-thumbnail.png"
+    },
+
+    renderNamModel: function (model, plugin, parameterUri, container, label) {
+        var self = $(this)
+        var uri = escape(plugin.uri)
 
         var gear = [model.gear_make, model.gear_model].filter(Boolean).join(' ')
         var subtitle = gear || model.folder || model.modeled_by || plugin.label
@@ -515,16 +659,12 @@ JqueryClass('effectBox', {
             model.folder ? 'in ' + model.folder : '',
         ].filter(Boolean).join(' \u00b7 ')
 
-        var thumbnail_href = (model.tone3000 && model.tone3000.image_url)
-                           ? model.tone3000.image_url
-                           : (plugin.gui && plugin.gui.thumbnail)
-                             ? ("/effect/image/thumbnail.png?uri=" + uri + "&v=" + ver)
-                             : "/resources/pedals/default-thumbnail.png"
+        var thumbnail_href = self.effectBox('namThumbnail', model, plugin)
 
         var div = document.createElement("div");
         div.innerHTML = Mustache.render(TEMPLATES.nam_model, {
             uri: uri,
-            label: model.label,
+            label: label || model.label,
             subtitle: subtitle,
             tooltip: tooltip,
             size: model.size,
