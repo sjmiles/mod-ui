@@ -303,6 +303,9 @@ $('document').ready(function() {
         console.log('DEV Mode Enabled')
         enable_dev_mode(true)
     }
+    if (PREFERENCES['plugins-dock'] == "right") {
+        desktop.effectBox.effectBox('setDock', 'right')
+    }
     if (PREFERENCES['plugins-folded'] == "true") {
         desktop.effectBox.effectBox('toggle')
     }
@@ -798,6 +801,7 @@ $('document').ready(function() {
         </ul>
         <span class="js-settings-trigger settings selected"></span>
         <span class="js-effects-fold fold"></span>
+        <span class="js-effects-dock dock" title="Dock on the right as a grid"></span>
         <!-- END EFFECTS MENU ITEMS -->
 
         <!-- EFFECTS LIBRARY SETTINGS WINDOW -->

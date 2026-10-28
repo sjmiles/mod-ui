@@ -1392,3 +1392,196 @@ svg .connecting-light { fill: none; stroke: #6FF; stroke-width: 1; z-index: 1001
     color: #999;
     white-space: normal;
 }
+
+/* Plugin bar buttons: search, pin and dock */
+#plugins-library ul.js-category-tabs {
+    width: auto;
+    margin-right: 110px;
+}
+#plugins-library #plugins-library-settings-window {
+    right: 111px;
+}
+#plugins-library .dock {
+    cursor: pointer;
+    display: block;
+    position: absolute;
+    top: 0;
+    right: 74px;
+    width: 36px;
+    height: 36px;
+    background-color: rgba(17, 17, 17, 0.66);
+    opacity: 0.8;
+}
+#plugins-library .dock:hover {
+    opacity: 1;
+}
+/* the icon: a screen with the bar where clicking puts it */
+#plugins-library .dock:before,
+#plugins-library .dock:after {
+    content: "";
+    position: absolute;
+    box-sizing: border-box;
+}
+#plugins-library .dock:before {
+    left: 9px;
+    top: 11px;
+    width: 18px;
+    height: 14px;
+    border: 2px solid #ddd;
+}
+#plugins-library .dock:after {
+    left: 20px;
+    top: 11px;
+    width: 7px;
+    height: 14px;
+    background: #ddd;
+}
+#plugins-library.dock-right .dock:after {
+    left: 9px;
+    top: 19px;
+    width: 18px;
+    height: 6px;
+}
+
+/* Plugin bar docked on the right, as a grid */
+#plugins-library.dock-right {
+    top: 45px;
+    bottom: 45px;
+    left: auto;
+    right: 0;
+    width: 360px;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    background: rgba(17, 17, 17, 0.85);
+    transition: opacity 0.5s;
+}
+#plugins-library.dock-right ul.js-category-tabs {
+    flex: none;
+    flex-wrap: wrap;
+    width: auto;
+    margin: 0;
+    padding: 42px 6px 6px;
+    overflow: visible;
+}
+#plugins-library.dock-right ul.js-category-tabs li,
+#plugins-library.dock-right ul.js-category-tabs li:hover,
+#plugins-library.dock-right ul.js-category-tabs li.selected {
+    float: none;
+    margin: 0 2px 2px 0;
+    padding: 3px 8px;
+}
+#plugins-library.dock-right #plugins-library-settings-window {
+    top: 0;
+    bottom: auto;
+}
+#plugins-library.dock-right #plugins-list {
+    flex: 1;
+    height: auto;
+    min-height: 0;
+    background: none;
+}
+#plugins-library.dock-right #plugins-list .nav {
+    display: none;
+}
+#plugins-library.dock-right #plugins-list #plugins-results {
+    left: 0;
+    right: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+#plugins-library.dock-right #plugins-list .plugins-wrapper {
+    display: none;
+    position: static;
+    left: 0 !important;
+    white-space: normal;
+    opacity: 1;
+    transition: none;
+}
+#plugins-library.dock-right #plugins-list .plugins-wrapper.selected,
+#plugins-library.dock-right #plugins-list .nam-group {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+}
+#plugins-library.dock-right #plugins-list .plugins-wrapper.selected {
+    padding: 4px 6px 12px;
+}
+#plugins-library.dock-right #plugins-list .plugins-wrapper .plugin {
+    display: block;
+    min-width: 0;
+    height: auto;
+    padding: 8px 4px;
+}
+#plugins-library.dock-right #plugins-list .plugins-wrapper .plugin .thumb {
+    height: 60px;
+}
+#plugins-library.dock-right #plugins-list .plugins-wrapper .plugin .thumb img {
+    max-width: 100%;
+    max-height: 56px;
+}
+#plugins-library.dock-right #plugins-list .plugins-wrapper .plugin .title,
+#plugins-library.dock-right #plugins-list .plugins-wrapper .plugin .author {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+#plugins-library.dock-right #plugins-list .nam-models-empty {
+    grid-column: 1 / -1;
+}
+
+/* docked, the flavors of one tone make a section: a header row that opens
+   and closes, then its flavors in the grid */
+#plugins-library.dock-right #plugins-list .nam-group {
+    grid-column: 1 / -1;
+    margin: 2px 0;
+}
+#plugins-library.dock-right #plugins-list .nam-group.open {
+    background: rgba(255, 255, 255, 0.06);
+}
+#plugins-library.dock-right #plugins-list .nam-group-items {
+    display: none;
+}
+#plugins-library.dock-right #plugins-list .nam-group.open .nam-group-items {
+    display: contents;
+}
+#plugins-library.dock-right #plugins-list .nam-group-header,
+#plugins-library.dock-right #plugins-list .nam-group-header .thumb {
+    cursor: pointer !important;
+}
+#plugins-library.dock-right #plugins-list .nam-group-header .title:before {
+    content: "\25B8\00A0";
+    color: #999;
+}
+#plugins-library.dock-right #plugins-list .nam-group.open .nam-group-header .title:before {
+    content: "\25BE\00A0";
+}
+#plugins-library.dock-right #plugins-list .plugins-wrapper .nam-group-header {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 52px 1fr;
+    column-gap: 8px;
+    align-items: center;
+    padding: 4px 6px;
+    text-align: left;
+    background: rgba(255, 255, 255, 0.04);
+}
+#plugins-library.dock-right #plugins-list .plugins-wrapper .nam-group-header .thumb {
+    grid-row: 1 / span 2;
+    height: 40px;
+}
+#plugins-library.dock-right #plugins-list .plugins-wrapper .nam-group-header .thumb img {
+    max-height: 40px;
+    margin: 0;
+}
+
+/* docked and folded, only the buttons stay */
+#plugins-library.dock-right.folded {
+    width: 111px;
+    bottom: auto;
+    height: 38px;
+    background: none;
+}
+#plugins-library.dock-right.folded ul.js-category-tabs,
+#plugins-library.dock-right.folded #plugins-list {
+    display: none;
+}
