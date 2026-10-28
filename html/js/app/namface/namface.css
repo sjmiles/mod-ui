@@ -140,6 +140,10 @@
 .mod-pedal-nam.nam-face-tall > .nam-face-backdrop img {
   filter: none;
 }
+/* The label sits right above the knob, which is drawn in the middle of
+   its 100px image, not at the top of the image, near the picture. */
 .mod-pedal-nam.nam-face-tall .mod-knob-title {
   text-shadow: none;
+  position: relative;
+  top: 16px;
 }
