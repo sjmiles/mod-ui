@@ -216,7 +216,7 @@ JqueryClass('effectBox', {
         self.find('.plugins-wrapper').data('pos', 0).data('plug', 0)
         self.effectBox('resetShift')
         self.effectBox('reserveSpace')
-        self.effectBox('calculateNavigation')
+        self.effectBox('showNamModels')
     },
 
     // Docked on the right and pinned open, the pedalboard makes room for the
@@ -497,6 +497,16 @@ JqueryClass('effectBox', {
                 return
             }
 
+            // the bottom strip lists every model; the grid groups the flavors
+            if (!self.hasClass('dock-right')) {
+                for (var i in models) {
+                    self.effectBox('renderNamModel', models[i], pluginData, nam.parameter, container)
+                }
+                if (self.data('category') == 'NAM')
+                    self.effectBox('calculateNavigation')
+                return
+            }
+
             var groups = self.effectBox('groupNamModels', models)
             for (var i in groups) {
                 if (groups[i].models.length == 1)
@@ -569,7 +579,7 @@ JqueryClass('effectBox', {
         }
     },
 
-    // A group shows as a header that opens and closes, followed by its models.
+    // In the grid, a group shows as a header that opens and closes, followed by its models.
     // Which groups are open is remembered in this browser.
     renderNamGroup: function (group, plugin, parameterUri, container, forceOpen) {
         var self = $(this)
@@ -894,7 +904,7 @@ JqueryClass('effectBox', {
         var self = $(this);
         var wrapper = self.find('.plugins-wrapper.selected');
         var parent = wrapper.parent().parent();
-        var plugins = self.effectBox('navItems', wrapper);
+        var plugins = wrapper.children();
         var pos = wrapper.data("pos");
         var pw = parent.width();
         var ww = wrapper.width();
@@ -904,24 +914,16 @@ JqueryClass('effectBox', {
         if (pos != -(ww - pw)) {
             for (var i = 0; i < plugins.length; i++) {
                 var plugw = $(plugins[i]).outerWidth();
-                shift = plugins[i].offsetLeft;
                 if (shift + plugw >= -pos) {
                     pos = -shift;
                     wrapper.data("plug", i);
                     break;
                 }
+                shift += plugw;
             }
         }
         wrapper.data("pos", pos);
         wrapper[0].style.left = pos + "px";
-    },
-
-    // The tiles the strip snaps to. In NAM Models these are the group headers
-    // and the models of open groups, which sit inside their group.
-    navItems: function (wrapper) {
-        if (wrapper.children('.nam-group').length == 0)
-            return wrapper.children()
-        return wrapper.find('.plugin:visible')
     },
 
     shiftPrev: function () {
@@ -936,7 +938,7 @@ JqueryClass('effectBox', {
         var self = $(this);
         var wrapper = self.find('.plugins-wrapper.selected');
         var parent = wrapper.parent().parent();
-        var children = self.effectBox('navItems', wrapper);
+        var children = wrapper.children();
         var plug = wrapper.data("plug");
         var pw = parent.width();
         var ww = wrapper.width();

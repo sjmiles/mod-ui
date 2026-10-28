@@ -1393,34 +1393,6 @@ svg .connecting-light { fill: none; stroke: #6FF; stroke-width: 1; z-index: 1001
     white-space: normal;
 }
 
-/* NAM model groups: the flavors of one tone, behind a header that opens them */
-#plugins-library .nam-group {
-    display: inline-block;
-    vertical-align: top;
-}
-#plugins-library .nam-group.open {
-    background: rgba(255, 255, 255, 0.06);
-}
-#plugins-library .nam-group-items {
-    display: none;
-}
-#plugins-library .nam-group.open .nam-group-items {
-    display: inline;
-}
-#plugins-library .nam-group-header {
-    cursor: pointer;
-}
-#plugins-library .nam-group-header .thumb {
-    cursor: pointer !important;
-}
-#plugins-library .nam-group-header .title:before {
-    content: "\25B8\00A0";
-    color: #999;
-}
-#plugins-library .nam-group.open .nam-group-header .title:before {
-    content: "\25BE\00A0";
-}
-
 /* Plugin bar buttons: search, pin and dock */
 #plugins-library ul.js-category-tabs {
     width: auto;
@@ -1557,13 +1529,31 @@ svg .connecting-light { fill: none; stroke: #6FF; stroke-width: 1; z-index: 1001
     grid-column: 1 / -1;
 }
 
-/* docked, a group is a section: a header row, then its flavors in the grid */
+/* docked, the flavors of one tone make a section: a header row that opens
+   and closes, then its flavors in the grid */
 #plugins-library.dock-right #plugins-list .nam-group {
     grid-column: 1 / -1;
     margin: 2px 0;
 }
+#plugins-library.dock-right #plugins-list .nam-group.open {
+    background: rgba(255, 255, 255, 0.06);
+}
+#plugins-library.dock-right #plugins-list .nam-group-items {
+    display: none;
+}
 #plugins-library.dock-right #plugins-list .nam-group.open .nam-group-items {
     display: contents;
+}
+#plugins-library.dock-right #plugins-list .nam-group-header,
+#plugins-library.dock-right #plugins-list .nam-group-header .thumb {
+    cursor: pointer !important;
+}
+#plugins-library.dock-right #plugins-list .nam-group-header .title:before {
+    content: "\25B8\00A0";
+    color: #999;
+}
+#plugins-library.dock-right #plugins-list .nam-group.open .nam-group-header .title:before {
+    content: "\25BE\00A0";
 }
 #plugins-library.dock-right #plugins-list .plugins-wrapper .nam-group-header {
     grid-column: 1 / -1;
