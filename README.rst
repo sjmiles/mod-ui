@@ -58,3 +58,14 @@ And now you are ready to start the webserver::
 
 Setting the environment variables is needed when developing on a PC.
 Open your browser and point to http://localhost:8888/.
+
+TONE3000
+--------
+
+The TONE3000 panel and the "Search all of TONE3000" picker are powered by
+`TONE3000 <https://www.tone3000.com>`_, which hosts the Neural Amp Modeler
+captures. The tones, their pictures and their licenses belong to their
+creators: the panel and the NAM pedal face show each creator and license, and
+models are only downloaded when you ask for them. The integration follows the
+`TONE3000 API terms <https://www.tone3000.com/api/terms>`_ (free,
+non-commercial tier).
