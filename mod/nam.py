@@ -40,6 +40,18 @@ METADATA_KEYS = (
 COVER_RE = re.compile(r'^cover\.(jpg|png|webp|gif)$')
 COVER_TYPES = {"jpg": "image/jpeg", "png": "image/png", "webp": "image/webp", "gif": "image/gif"}
 
+# The short names of the licenses that TONE3000 creators choose.
+LICENSE_LABELS = {
+    "t3k": "T3K license",
+    "cc0": "CC0",
+    "cc-by": "CC BY",
+    "cc-by-sa": "CC BY-SA",
+    "cc-by-nc": "CC BY-NC",
+    "cc-by-nc-sa": "CC BY-NC-SA",
+    "cc-by-nd": "CC BY-ND",
+    "cc-by-nc-nd": "CC BY-NC-ND",
+}
+
 # Parsed models by full path, kept while the file's mtime and size are unchanged.
 _models_cache = {}
 
@@ -197,6 +209,29 @@ def cover_for(path):
     return cover, COVER_TYPES[match.group(1)]
 
 
+def license_label(license):
+    # A short name for a tone's license, or None when the tone has none.
+    if not isinstance(license, str) or not license:
+        return None
+    return LICENSE_LABELS.get(license.lower(), license.upper())
+
+
+def tone3000_credit(sidecar):
+    # Who made a downloaded tone and under which license, for the face. The
+    # TONE3000 API terms want both kept with the tone, and the TONE3000 mark on
+    # the block that plays it. None for a model that did not come from there.
+    if not sidecar or sidecar.get("source") != "tone3000":
+        return None
+    creator = sidecar.get("creator") if isinstance(sidecar.get("creator"), dict) else {}
+    name = creator.get("display_name") or creator.get("username")
+    url = sidecar.get("url")
+    return {
+        'creator': name if isinstance(name, str) and name else None,
+        'license': license_label(sidecar.get("license")),
+        'url': url if isinstance(url, str) and url.startswith("https://") else None,
+    }
+
+
 def model_face(path):
     # What the pedal face of the NAM plugin shows for a model: a title, a line
     # under it, the size and a picture. None for a path outside the library.
@@ -222,4 +257,5 @@ def model_face(path):
         'detail': detail or None,
         'size': info.get('size'),
         'image': image,
+        'tone3000': tone3000_credit(sidecar),
     }

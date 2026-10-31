@@ -17,6 +17,14 @@ export const FILETYPE = 'nammodel'
  * @property {string|null} detail
  * @property {string|null} size
  * @property {string|null} image
+ * @property {Credit|null} [tone3000] Set when the model came from TONE3000.
+ */
+
+/**
+ * @typedef {object} Credit
+ * @property {string|null} creator
+ * @property {string|null} license
+ * @property {string|null} url
  */
 
 /**
@@ -58,12 +66,19 @@ export function modelPathOf(event, uri) {
 }
 
 /**
- * The line under the title: the capture and its size.
+ * The line under the title: the capture and its size, then who made a
+ * TONE3000 tone and its license (the API terms want both kept with the tone).
  * @param {Face} face
  * @returns {string}
  */
 export function detailLine(face) {
-    return [face.detail, face.size].filter(Boolean).join(' · ')
+    const credit = face.tone3000 || null
+    return [
+        face.detail,
+        face.size,
+        credit && credit.creator ? 'by ' + credit.creator : null,
+        credit ? credit.license : null,
+    ].filter(Boolean).join(' · ')
 }
 
 /**

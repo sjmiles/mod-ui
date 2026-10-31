@@ -11,6 +11,8 @@
 import * as model from './model.js'
 import { h, clear } from './dom.js'
 
+const TONE3000_SITE = 'https://www.tone3000.com'
+
 /**
  * @typedef {object} Handlers
  * @property {() => void} onSignIn
@@ -81,9 +83,14 @@ export function createLayout(root, handlers) {
     const detail = h('aside.t3k-detail', { 'aria-label': 'Models of the tone' })
     const message = h('div.t3k-message', { role: 'status' })
 
+    // The API terms ask for "Powered by TONE3000" and a link to the site.
     const brand = h('div.t3k-brand', {}, [
-        h('span.t3k-wordmark', { text: 'TONE3000' }),
-        h('span.t3k-brand-note', { text: 'Neural amp, pedal and cab captures' }),
+        h('a.t3k-wordmark', { href: TONE3000_SITE, target: '_blank', rel: 'noopener', text: 'TONE3000' }),
+        h('span.t3k-brand-note', {}, [
+            'Powered by ',
+            h('a', { href: TONE3000_SITE, target: '_blank', rel: 'noopener', text: 'TONE3000' }),
+            ' · neural amp, pedal and cab captures',
+        ]),
     ])
 
     const body = h('div.t3k-body', {}, [results, detail])
@@ -212,7 +219,7 @@ export function renderTones(el, state, handlers) {
         }, [
             image(tone.image_url, 't3k-card-image', ''),
             h('span.t3k-card-title', { text: tone.title }),
-            h('span.t3k-card-details', { text: model.toneDetails(tone) }),
+            h('span.t3k-card-details', { text: [model.toneDetails(tone), model.licenseLabel(tone.license)].filter(Boolean).join(' · ') }),
             h('span.t3k-card-creator', {}, [
                 image(tone.creator.avatar_url, 't3k-avatar.t3k-avatar--small', ''),
                 h('span', { text: model.creatorName(tone.creator) }),
@@ -244,7 +251,8 @@ export function renderDetail(el, state, handlers) {
         h('button.t3k-btn.t3k-btn--quiet', { type: 'button', text: 'Close', onclick: handlers.onCloseTone }),
     ]))
     el.detail.appendChild(h('div.t3k-dim', {}, [
-        model.toneDetails(tone) + ' · by ' + model.creatorName(tone.creator) + ' · ',
+        [model.toneDetails(tone), 'by ' + model.creatorName(tone.creator), model.licenseLabel(tone.license)]
+            .filter(Boolean).join(' · ') + ' · ',
         tone.url ? h('a', { href: tone.url, target: '_blank', rel: 'noopener', text: 'View on TONE3000 ↗' }) : null,
     ]))
 
