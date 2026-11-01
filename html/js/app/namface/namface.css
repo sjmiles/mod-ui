@@ -92,6 +92,23 @@
   text-overflow: ellipsis;
 }
 
+/* The TONE3000 mark, in the top right corner beside the plate. */
+.mod-pedal > .nam-face-mark {
+  position: absolute;
+  top: 6px;
+  right: 10px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(8, 8, 8, 0.72);
+  color: #fff;
+  font-size: 10px;
+  font-weight: bold;
+  letter-spacing: .06em;
+  line-height: 1.4;
+  pointer-events: none;
+  z-index: 1;
+}
+
 /* The knob titles and the chosen model sit on the picture now. */
 .mod-pedal.nam-face-on .mod-knob-title,
 .mod-pedal.nam-face-on .mod-enumerated-selected {

@@ -132,7 +132,8 @@ class TestModelFace(unittest.TestCase):
         path = os.path.join(self.models_dir, "twin.nam")
         write_json(path, wavenet(4, {"name": "Twin Clean", "gear_make": "Fender", "gear_model": "Twin Reverb"}))
         face = nam.model_face(path)
-        self.assertEqual(face, {'title': "Fender Twin Reverb", 'detail': "Twin Clean", 'size': "nano", 'image': None})
+        self.assertEqual(face, {'title': "Fender Twin Reverb", 'detail': "Twin Clean", 'size': "nano", 'image': None,
+                                'tone3000': None})
 
     def test_model_without_metadata(self):
         path = os.path.join(self.models_dir, "mystery.nam")
@@ -144,13 +145,19 @@ class TestModelFace(unittest.TestCase):
         folder = os.path.join(self.models_dir, "TONE3000", "Plexi")
         path = os.path.join(folder, "Crunch (nano).nam")
         write_json(path, wavenet(4, {"name": "Crunch"}))
-        write_json(os.path.join(folder, "tone3000.json"), {"title": "Marshall Plexi", "image": "cover.jpg",
-                                                           "image_url": "https://cdn.tone3000.com/p.jpg"})
+        write_json(os.path.join(folder, "tone3000.json"), {"source": "tone3000", "title": "Marshall Plexi",
+                                                           "image": "cover.jpg",
+                                                           "image_url": "https://cdn.tone3000.com/p.jpg",
+                                                           "url": "https://www.tone3000.com/tones/plexi-77",
+                                                           "creator": {"username": "amp_guy", "display_name": None},
+                                                           "license": "cc-by-nc"})
         # the sidecar names a picture that is not there yet: the remote one is used
         face = nam.model_face(path)
         self.assertEqual(face['title'], "Marshall Plexi")
         self.assertEqual(face['detail'], "Crunch")
         self.assertEqual(face['image'], "https://cdn.tone3000.com/p.jpg")
+        self.assertEqual(face['tone3000'], {'creator': "amp_guy", 'license': "CC BY-NC",
+                                            'url': "https://www.tone3000.com/tones/plexi-77"})
         self.assertIsNone(nam.cover_for(path))
 
         with open(os.path.join(folder, "cover.jpg"), 'wb') as fh:
@@ -158,6 +165,13 @@ class TestModelFace(unittest.TestCase):
         self.assertTrue(nam.model_face(path)['image'].startswith("/nam/image?path="))
         self.assertEqual(nam.cover_for(path), (os.path.join(os.path.realpath(folder), "cover.jpg"), "image/jpeg"))
         self.assertTrue(nam.list_models()[0]['image'].startswith("/nam/image?path="))
+
+    def test_license_label(self):
+        self.assertEqual(nam.license_label("t3k"), "T3K license")
+        self.assertEqual(nam.license_label("CC-BY"), "CC BY")
+        self.assertEqual(nam.license_label("mit"), "MIT")
+        self.assertIsNone(nam.license_label(None))
+        self.assertIsNone(nam.license_label(""))
 
     def test_paths_outside_the_library(self):
         outside = os.path.join(self.tmp, "elsewhere.nam")

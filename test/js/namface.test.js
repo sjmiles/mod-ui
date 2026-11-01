@@ -26,6 +26,10 @@ test('modelPathOf reads start and change events', () => {
 test('detailLine and isImageUrl', () => {
     assert.equal(detailLine({ title: 't', detail: 'Crunch', size: 'nano', image: null }), 'Crunch · nano')
     assert.equal(detailLine({ title: 't', detail: null, size: null, image: null }), '')
+    const credit = { creator: 'amp_guy', license: 'CC BY-NC', url: null }
+    assert.equal(detailLine({ title: 't', detail: 'Crunch', size: 'nano', image: null, tone3000: credit }),
+        'Crunch · nano · by amp_guy · CC BY-NC')
+    assert.equal(detailLine({ title: 't', detail: null, size: null, image: null, tone3000: { creator: null, license: null, url: null } }), '')
     assert.ok(isImageUrl('/nam/image?path=x'))
     assert.ok(isImageUrl('https://cdn.tone3000.com/a.jpg'))
     assert.ok(!isImageUrl('http://evil/a.jpg'))

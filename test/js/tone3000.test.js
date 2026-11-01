@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
     LISTS, architectureLabel, creatorName, defaultPicks, formatCountdown, gearLabel, isImageUrl,
-    listInfo, readPick, sizeRank, sortModels, togglePick, toneDetails, tonesOnDevice,
+    licenseLabel, listInfo, readPick, sizeRank, sortModels, togglePick, toneDetails, tonesOnDevice,
 } from '../../html/js/app/tone3000/model.js'
 
 const m = (id, name, size, architecture = '1') => ({ id, name, size, architecture })
@@ -99,4 +99,13 @@ test('readPick reads the picker window and nothing else', () => {
     assert.deepEqual(readPick({ type: 'tone3000-select', canceled: true }), { toneId: null, error: null })
     assert.deepEqual(readPick({ type: 'tone3000-select', tone_id: '5' }), { toneId: null, error: null })
     assert.deepEqual(readPick({ type: 'tone3000-select', error: 'No' }), { toneId: null, error: 'No' })
+})
+
+test('licenseLabel', () => {
+    assert.equal(licenseLabel('t3k'), 'T3K license')
+    assert.equal(licenseLabel('cc-by-nc'), 'CC BY-NC')
+    assert.equal(licenseLabel('CC-BY'), 'CC BY')
+    assert.equal(licenseLabel('mit'), 'MIT')
+    assert.equal(licenseLabel(null), '')
+    assert.equal(licenseLabel(''), '')
 })

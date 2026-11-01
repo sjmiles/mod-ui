@@ -28,6 +28,7 @@
  * @property {number} a1_models_count
  * @property {number} a2_models_count
  * @property {boolean} is_favorite
+ * @property {string|null} license The creator's license: t3k, cc-by, cc-by-nc...
  * @property {Creator} creator
  */
 
@@ -231,6 +232,31 @@ export function toneDetails(tone) {
         parts.push(tone.models_count + (tone.models_count === 1 ? ' model' : ' models'))
     }
     return parts.join(' · ')
+}
+
+/** The short names of the licenses that TONE3000 creators choose. */
+const LICENSE_LABELS = {
+    't3k': 'T3K license',
+    'cc0': 'CC0',
+    'cc-by': 'CC BY',
+    'cc-by-sa': 'CC BY-SA',
+    'cc-by-nc': 'CC BY-NC',
+    'cc-by-nc-sa': 'CC BY-NC-SA',
+    'cc-by-nd': 'CC BY-ND',
+    'cc-by-nc-nd': 'CC BY-NC-ND',
+}
+
+/**
+ * A short name for a tone's license, or '' when it has none. The API terms
+ * want the creator's license shown with the tone.
+ * @param {string|null|undefined} license
+ * @returns {string}
+ */
+export function licenseLabel(license) {
+    if (typeof license !== 'string' || !license) {
+        return ''
+    }
+    return LICENSE_LABELS[/** @type {keyof typeof LICENSE_LABELS} */ (license.toLowerCase())] || license.toUpperCase()
 }
 
 /**

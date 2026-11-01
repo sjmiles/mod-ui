@@ -128,6 +128,9 @@ def tone_summary(tone):
         'a1_models_count': _int_or_zero(tone.get("a1_models_count")),
         'a2_models_count': _int_or_zero(tone.get("a2_models_count")),
         'is_favorite': bool(tone.get("is_favorite")),
+        # The creator's license (t3k, cc-by, cc-by-nc...). The API terms say it
+        # must stay with the tone and be shown.
+        'license': _str_or_none(tone.get("license")),
         'creator': {
             'username': _str_or_none(user.get("username")),
             'display_name': _str_or_none(user.get("display_name")) or _str_or_none(user.get("username")),
@@ -264,6 +267,7 @@ def sidecar_for(tone, files, image=None):
         'gear': tone['gear'],
         'image_url': tone['image_url'],
         'creator': tone['creator'],
+        'license': tone.get('license'),
         'models': files,
         'image': image,
         'downloaded_at': int(time.time()),

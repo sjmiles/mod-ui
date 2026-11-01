@@ -144,6 +144,31 @@ function renderPlate(pedal, face) {
 }
 
 /**
+ * The TONE3000 mark in the corner of the pedal, for a model from TONE3000
+ * (their design rules put it on the block that plays a loaded tone).
+ * @param {HTMLElement} pedal
+ * @param {model.Face|null} face
+ */
+function renderMark(pedal, face) {
+    const old = findChild(pedal, 'nam-face-mark')
+    if (!face || !face.tone3000) {
+        if (old) {
+            old.remove()
+        }
+        return
+    }
+    const mark = document.createElement('div')
+    mark.className = 'nam-face-mark'
+    mark.textContent = 'T3K'
+    mark.title = 'From TONE3000'
+    if (old) {
+        old.replaceWith(mark)
+    } else {
+        pedal.appendChild(mark)
+    }
+}
+
+/**
  * @param {HTMLElement} icon
  * @param {model.Face|null} face
  */
@@ -156,12 +181,14 @@ function render(icon, face) {
         if (old) {
             old.remove()
         }
+        renderMark(pedal, null)
         return
     }
     addStylesheet()
     pedal.classList.add('nam-face-on')
     renderBackdrop(icon, pedal, face.image)
     renderPlate(pedal, face)
+    renderMark(pedal, face)
 }
 
 /**

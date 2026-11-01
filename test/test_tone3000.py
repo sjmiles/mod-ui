@@ -23,6 +23,7 @@ TONE = {
     "a1_models_count": 2,
     "a2_models_count": 1,
     "is_favorite": True,
+    "license": "cc-by-nc",
     "user": {"username": "amp_guy", "display_name": None, "avatar_url": "https://cdn.tone3000.com/a.png"},
 }
 
@@ -51,12 +52,14 @@ class TestHelpers(unittest.TestCase):
         self.assertEqual(summary['creator']['display_name'], "amp_guy")
         self.assertEqual(summary['a2_models_count'], 1)
         self.assertTrue(summary['is_favorite'])
+        self.assertEqual(summary['license'], "cc-by-nc")
 
     def test_tone_summary_tolerates_missing_fields(self):
         summary = tone3000.tone_summary({"id": 5})
         self.assertEqual(summary['title'], "Untitled")
         self.assertIsNone(summary['image_url'])
         self.assertIsNone(summary['creator']['username'])
+        self.assertIsNone(summary['license'])
 
     def test_first_image(self):
         self.assertEqual(tone3000.first_image([{"url": "https://x/y.png"}]), "https://x/y.png")
@@ -114,6 +117,7 @@ class TestToneFolder(unittest.TestCase):
             sidecar = json.load(fh)
         self.assertEqual(sidecar['tone_id'], 77)
         self.assertEqual(sidecar['image_url'], "https://cdn.tone3000.com/plexi.png")
+        self.assertEqual(sidecar['license'], "cc-by-nc")
         self.assertEqual(sorted(sidecar['models'].keys()), ["2", "3"])
 
         # the library shows the downloads with the details of the tone
