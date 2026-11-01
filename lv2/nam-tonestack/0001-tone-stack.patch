@@ -1,0 +1,393 @@
+From 28ffd7b77b8c8acd669ed9728a614b77f9666298 Mon Sep 17 00:00:00 2001
+From: Scott Miles <scott.miles@gmail.com>
+Date: Wed, 28 Oct 2026 20:48:51 +0000
+Subject: [PATCH] Add Bass/Middle/Treble tone stack after the model
+
+Ported from the NAM desktop plugin (NeuralAmpModeler/ToneStack.cpp, MIT):
+low shelf at 150 Hz (+/-20 dB), peaking at 425 Hz (+/-15 dB) and high shelf
+at 1800 Hz (+/-10 dB). Knobs go 0 to 10, and 5 (the default) is flat, so
+existing pedalboards sound the same. The new ports are appended (7, 8, 9),
+so the indices of the existing ports do not change. The MOD face shows the
+three knobs between Input and Output.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ CMakeLists.txt                      |   2 +-
+ resources/modgui.ttl                |  12 ++
+ resources/modgui/stylesheet-nam.css |  39 +++++-
+ resources/neural_amp_modeler.ttl.in |  24 ++++
+ src/nam_plugin.cpp                  |   9 ++
+ src/nam_plugin.h                    |   7 ++
+ src/tone_stack.h                    | 176 ++++++++++++++++++++++++++++
+ 7 files changed, 267 insertions(+), 2 deletions(-)
+ create mode 100644 src/tone_stack.h
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 9bfb6ff..5802afc 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -1,6 +1,6 @@
+ cmake_minimum_required(VERSION 3.10)
+ 
+-project(NeuralAmpModelerLv2 VERSION 0.2.3)
++project(NeuralAmpModelerLv2 VERSION 0.2.4)
+ 
+ set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+ set(LIB_INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/lib CACHE PATH "The library install dir (default: lib)")
+diff --git a/resources/modgui.ttl b/resources/modgui.ttl
+index 360d26f..d3c59b1 100644
+--- a/resources/modgui.ttl
++++ b/resources/modgui.ttl
+@@ -15,6 +15,18 @@
+             lv2:name "Input Lvl";
+         ], [
+             lv2:index 1;
++            lv2:symbol "bass";
++            lv2:name "Bass";
++        ], [
++            lv2:index 2;
++            lv2:symbol "middle";
++            lv2:name "Middle";
++        ], [
++            lv2:index 3;
++            lv2:symbol "treble";
++            lv2:name "Treble";
++        ], [
++            lv2:index 4;
+             lv2:symbol "output_level";
+             lv2:name "Output Lvl";
+         ];
+diff --git a/resources/modgui/stylesheet-nam.css b/resources/modgui/stylesheet-nam.css
+index 7f9632b..f85f723 100644
+--- a/resources/modgui/stylesheet-nam.css
++++ b/resources/modgui/stylesheet-nam.css
+@@ -71,7 +71,7 @@
+ }
+ 
+ .mod-pedal-nam .mod-control-group .mod-knob:last-child {
+-    margin-left: 315px;
++    margin-left: 26px;
+ }
+ 
+ .mod-pedal-nam .mod-control-group .mod-knob .mod-knob-image {
+@@ -84,6 +84,43 @@
+     cursor:pointer;
+ }
+ 
++/* = TONE STACK
++   Bass, Middle and Treble sit between Input Lvl and Output Lvl, on smaller
++   knobs, and the footswitch moves down under them.
++================================================ */
++.mod-pedal-nam .mod-control-group .mod-knob {
++    vertical-align:top;
++}
++
++.mod-pedal-nam .mod-control-group .mod-knob:nth-child(2),
++.mod-pedal-nam .mod-control-group .mod-knob:nth-child(3),
++.mod-pedal-nam .mod-control-group .mod-knob:nth-child(4) {
++    margin-left:27px;
++}
++
++.mod-pedal-nam .mod-control-group .mod-knob:nth-child(2) .mod-knob-image,
++.mod-pedal-nam .mod-control-group .mod-knob:nth-child(3) .mod-knob-image,
++.mod-pedal-nam .mod-control-group .mod-knob:nth-child(4) .mod-knob-image {
++    background-size:3200px 64px;
++    height:64px;
++    width:64px;
++}
++
++.mod-pedal-nam .mod-control-group .mod-knob:nth-child(2) .mod-knob-title,
++.mod-pedal-nam .mod-control-group .mod-knob:nth-child(3) .mod-knob-title,
++.mod-pedal-nam .mod-control-group .mod-knob:nth-child(4) .mod-knob-title {
++    position:relative;
++    top:8px;
++}
++
++.mod-pedal-nam .mod-footswitch {
++    background-size:70px 40px;
++    width:70px;
++    height:40px;
++    top:176px;
++    left:245px;
++}
++
+ .mod-pedal-nam .mod-enumerated {
+     position: relative;
+     font-weight: bold;
+diff --git a/resources/neural_amp_modeler.ttl.in b/resources/neural_amp_modeler.ttl.in
+index 1125b8d..949c2bd 100644
+--- a/resources/neural_amp_modeler.ttl.in
++++ b/resources/neural_amp_modeler.ttl.in
+@@ -109,4 +109,28 @@ A large collection of models is available at https://www.tone3000.com
+ 		lv2:default 1.0;
+ 		lv2:minimum 0.0;
+ 		lv2:maximum 1.0;
++	], [
++		a lv2:ControlPort, lv2:InputPort;
++		lv2:index 7;
++		lv2:symbol "bass";
++		lv2:name "Bass";
++		lv2:default 5.0;
++		lv2:minimum 0.0;
++		lv2:maximum 10.0;
++	], [
++		a lv2:ControlPort, lv2:InputPort;
++		lv2:index 8;
++		lv2:symbol "middle";
++		lv2:name "Middle";
++		lv2:default 5.0;
++		lv2:minimum 0.0;
++		lv2:maximum 10.0;
++	], [
++		a lv2:ControlPort, lv2:InputPort;
++		lv2:index 9;
++		lv2:symbol "treble";
++		lv2:name "Treble";
++		lv2:default 5.0;
++		lv2:minimum 0.0;
++		lv2:maximum 10.0;
+ 	].
+diff --git a/src/nam_plugin.cpp b/src/nam_plugin.cpp
+index dae47de..406219d 100644
+--- a/src/nam_plugin.cpp
++++ b/src/nam_plugin.cpp
+@@ -47,6 +47,8 @@ namespace NAM {
+ 
+ 		loader.SetExternalSampleRate((int)sampleRate);
+ 
++		toneStack.set_sample_rate(sampleRate);
++
+ 		// for fetching initial options, can be null
+ 		LV2_Options_Option* options = nullptr;
+ 
+@@ -347,6 +349,13 @@ namespace NAM {
+ 			modelLoudnessAdjustmentDB = currentModel->GetRecommendedOutputDBAdjustment();
+ 		}
+ 
++		// Tone stack after the model, as in the NAM desktop plugin.
++		// The ports are optional, for hosts that do not connect them.
++		if (ports.bass && ports.middle && ports.treble)
++		{
++			toneStack.process(ports.audio_out, n_samples, *(ports.bass), *(ports.middle), *(ports.treble));
++		}
++
+ 		// Convert output level from db
+ 		float desiredOutputLevel = powf(10, (*(ports.output_level) + modelLoudnessAdjustmentDB) * 0.05f);
+ 
+diff --git a/src/nam_plugin.h b/src/nam_plugin.h
+index 318819e..54b3c75 100644
+--- a/src/nam_plugin.h
++++ b/src/nam_plugin.h
+@@ -23,6 +23,8 @@
+ 
+ #include <NeuralAudio/NeuralModel.h>
+ 
++#include "tone_stack.h"
++
+ #define PlUGIN_URI "http://github.com/mikeoliphant/neural-amp-modeler-lv2"
+ #define MODEL_URI PlUGIN_URI "#model"
+ 
+@@ -61,6 +63,9 @@ namespace NAM {
+ 			float* input_level;
+ 			float* output_level;
+ 			float* quality_scale;
++			float* bass;
++			float* middle;
++			float* treble;
+ 		};
+ 
+ 		Ports ports = {};
+@@ -77,6 +82,8 @@ namespace NAM {
+ 		float prevDCInput = 0;
+ 		float prevDCOutput = 0;
+ 
++		ToneStack toneStack;
++
+ 		Plugin();
+ 		~Plugin();
+ 
+diff --git a/src/tone_stack.h b/src/tone_stack.h
+new file mode 100644
+index 0000000..87a6a85
+--- /dev/null
++++ b/src/tone_stack.h
+@@ -0,0 +1,176 @@
++#pragma once
++
++// Bass / Middle / Treble tone stack, ported from the NAM desktop plugin
++// (NeuralAmpModelerPlugin, NeuralAmpModeler/ToneStack.cpp, MIT licence,
++// Copyright (c) 2022 Steven Atkinson), with the biquads of AudioDSPTools
++// (dsp/RecursiveLinearFilter.cpp). Each knob goes 0 to 10, and 5 is flat.
++//
++// Bass:   low shelf at 150 Hz, Q 0.707, +/-20 dB
++// Middle: peaking at 425 Hz, +/-15 dB, Q 1.5 when cutting and 0.7 when boosting
++// Treble: high shelf at 1800 Hz, Q 0.707, +/-10 dB
++
++#include <cmath>
++#include <cstdint>
++
++namespace NAM {
++	class Biquad {
++	public:
++		enum Type { LowShelf, Peaking, HighShelf };
++
++		void set(Type type, double sampleRate, double frequency, double quality, double gainDB) noexcept
++		{
++			const double a = pow(10.0, gainDB / 40.0);
++			const double omega0 = 2.0 * M_PI * frequency / sampleRate;
++			const double alpha = sin(omega0) / (2.0 * quality);
++			const double cosw = cos(omega0);
++
++			double a0, a1, a2, b0, b1, b2;
++
++			switch (type)
++			{
++				case LowShelf:
++				{
++					const double ap = a + 1.0;
++					const double am = a - 1.0;
++					const double roota2alpha = 2.0 * sqrt(a) * alpha;
++
++					b0 = a * (ap - am * cosw + roota2alpha);
++					b1 = 2.0 * a * (am - ap * cosw);
++					b2 = a * (ap - am * cosw - roota2alpha);
++					a0 = ap + am * cosw + roota2alpha;
++					a1 = -2.0 * (am + ap * cosw);
++					a2 = ap + am * cosw - roota2alpha;
++					break;
++				}
++				case Peaking:
++				{
++					b0 = 1.0 + alpha * a;
++					b1 = -2.0 * cosw;
++					b2 = 1.0 - alpha * a;
++					a0 = 1.0 + alpha / a;
++					a1 = -2.0 * cosw;
++					a2 = 1.0 - alpha / a;
++					break;
++				}
++				default: // HighShelf
++				{
++					const double ap = a + 1.0;
++					const double am = a - 1.0;
++					const double roota2alpha = 2.0 * sqrt(a) * alpha;
++
++					b0 = a * (ap + am * cosw + roota2alpha);
++					b1 = -2.0 * a * (am + ap * cosw);
++					b2 = a * (ap + am * cosw - roota2alpha);
++					a0 = ap - am * cosw + roota2alpha;
++					a1 = 2.0 * (am - ap * cosw);
++					a2 = ap - am * cosw - roota2alpha;
++					break;
++				}
++			}
++
++			this->b0 = b0 / a0;
++			this->b1 = b1 / a0;
++			this->b2 = b2 / a0;
++			this->a1 = a1 / a0;
++			this->a2 = a2 / a0;
++		}
++
++		void reset() noexcept
++		{
++			x1 = x2 = y1 = y2 = 0;
++		}
++
++		// Direct form I, like AudioDSPTools
++		void process(float* buffer, uint32_t n_samples) noexcept
++		{
++			for (uint32_t i = 0; i < n_samples; i++)
++			{
++				const double x = buffer[i];
++				const double y = (b0 * x) + (b1 * x1) + (b2 * x2) - (a1 * y1) - (a2 * y2);
++
++				x2 = x1;
++				x1 = x;
++				y2 = y1;
++				y1 = y;
++
++				buffer[i] = (float)y;
++			}
++		}
++
++	private:
++		double b0 = 1, b1 = 0, b2 = 0, a1 = 0, a2 = 0;
++		double x1 = 0, x2 = 0, y1 = 0, y2 = 0;
++	};
++
++	class ToneStack {
++	public:
++		void set_sample_rate(double rate) noexcept
++		{
++			sampleRate = rate;
++
++			// force the filters to be recomputed for the new rate
++			bassVal = middleVal = trebleVal = -1;
++		}
++
++		void reset() noexcept
++		{
++			bass.reset();
++			middle.reset();
++			treble.reset();
++		}
++
++		void process(float* buffer, uint32_t n_samples, float bassIn, float middleIn, float trebleIn) noexcept
++		{
++			if (bassIn != bassVal)
++			{
++				bassVal = bassIn;
++				bass.set(Biquad::LowShelf, sampleRate, 150.0, 0.707, 4.0 * (bassVal - 5.0));
++			}
++
++			if (middleIn != middleVal)
++			{
++				middleVal = middleIn;
++
++				const double midGainDB = 3.0 * (middleVal - 5.0);
++
++				// Wider EQ on mid bump up to sound less honky.
++				middle.set(Biquad::Peaking, sampleRate, 425.0, midGainDB < 0.0 ? 1.5 : 0.7, midGainDB);
++			}
++
++			if (trebleIn != trebleVal)
++			{
++				trebleVal = trebleIn;
++				treble.set(Biquad::HighShelf, sampleRate, 1800.0, 0.707, 2.0 * (trebleVal - 5.0));
++			}
++
++			// All three knobs at 5 is flat: skip the filters
++			if ((bassVal == 5.0f) && (middleVal == 5.0f) && (trebleVal == 5.0f))
++			{
++				if (!flat)
++				{
++					reset();
++					flat = true;
++				}
++
++				return;
++			}
++
++			flat = false;
++
++			bass.process(buffer, n_samples);
++			middle.process(buffer, n_samples);
++			treble.process(buffer, n_samples);
++		}
++
++	private:
++		double sampleRate = 48000;
++		float bassVal = -1;
++		float middleVal = -1;
++		float trebleVal = -1;
++		bool flat = false;
++
++		Biquad bass;
++		Biquad middle;
++		Biquad treble;
++	};
++}
+-- 
+2.43.0
+
